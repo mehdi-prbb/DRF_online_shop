@@ -5,6 +5,13 @@ name = "pypi"
 
 [packages]
 django = "*"
+django-debug-toolbar = "*"
+mysqlclient = "2.1.0"
+djangorestframework = "*"
+drf-nested-routers = "*"
+django-filter = "*"
+djoser = "*"
+djangorestframework-simplejwt = "*"
 
 [dev-packages]
 
