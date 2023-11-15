@@ -41,6 +41,7 @@ INSTALLED_APPS = [
 
     # My apps
     'core.apps.CoreConfig',
+    'store.apps.StoreConfig',
 
     # Third party
     'django_filters',
