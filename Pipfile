@@ -13,6 +13,7 @@ django-filter = "*"
 djoser = "*"
 djangorestframework-simplejwt = "*"
 drf-spectacular = "*"
+django-colorfield = "*"
 
 [dev-packages]
 

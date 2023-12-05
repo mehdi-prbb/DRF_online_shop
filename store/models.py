@@ -1,4 +1,7 @@
 from django.db import models
+from django.core.validators import MinValueValidator 
+
+from colorfield.fields import ColorField
 
 
 
@@ -16,8 +19,16 @@ class Category(models.Model):
         verbose_name_plural = 'categories'
 
 
-    def __str__(self):
-        return self.title
+    def __str__(self):    
+        """
+        Return full path category.
+        """                       
+        full_path = [self.title]             
+        parent_name = self.sub_category
+        while parent_name is not None:
+            full_path.append(parent_name.title)
+            parent_name = parent_name.sub_category
+        return ' -> '.join(full_path[::-1])
 
 
 class Discount(models.Model):
@@ -27,11 +38,12 @@ class Discount(models.Model):
 
 class Product(models.Model):
     name = models.CharField(max_length=255)
-    category = models.ForeignKey(Category, on_delete=models.PROTECT, related_name='products')
+    category = models.ForeignKey(
+                                 Category, on_delete=models.PROTECT,
+                                 related_name='products'
+                                )
     slug = models.SlugField(max_length=255)
     description = models.TextField()
-    unit_price = models.IntegerField()
-    inventory = models.IntegerField()
     datetime_created = models.DateTimeField(auto_now_add=True)
     detatime_modified = models.DateTimeField(auto_now=True)
     discount = models.ManyToManyField(Discount, blank=True)
@@ -42,4 +54,61 @@ class Product(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class Mobile(Product):
+    screen_technology = models.CharField(max_length=50)
+    picture_resolution = models.CharField(max_length=50)
+    os_version = models.CharField(max_length=50)
+    size = models.CharField(max_length=50)
+    accessories = models.CharField(max_length=50)
+
+    def __str__(self):
+        return self.name
+    
+
+class Color(models.Model):
+    name = models.CharField(max_length=50, unique=True)
+    code = ColorField(default='FF0000', unique=True)
+
+    def __str__(self):
+        return self.name
+    
+
+class MobileImage(models.Model):
+    name = models.CharField(max_length=50)
+    image = models.ImageField(upload_to='images/')
+    mobile = models.ForeignKey(
+                                Mobile, on_delete=models.PROTECT,
+                                related_name='mobile_images'
+                            )
+
+    def __str__(self):
+        return self.name
+    
+
+class MobileVariety(models.Model):
+    mobile = models.ForeignKey(
+                               Mobile, on_delete=models.CASCADE,
+                               related_name='mobile_vars'
+                               )
+    color = models.ForeignKey(
+                              Color, on_delete=models.CASCADE,
+                              related_name='mobile_colors'
+                              )
+    unit_price = models.IntegerField()
+    inventory = models.PositiveIntegerField(
+                                            default=1,
+                                            validators=[MinValueValidator(1)]
+                                            )
+
+    class Meta:
+        unique_together = [['color', 'mobile']]
+    
+    def __str__(self):
+        return ''
+    
+    
+    
+    
     

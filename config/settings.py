@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
+import os
 from datetime import timedelta
 from pathlib import Path
 
@@ -49,6 +50,7 @@ INSTALLED_APPS = [
     'djoser',
     'debug_toolbar',
     'drf_spectacular',
+    'colorfield',
 ]
 
 MIDDLEWARE = [
@@ -170,3 +172,11 @@ SPECTACULAR_SETTINGS = {
     'DESCRIPTION': 'Project API schema',
     'VERSION': '1.0.0',
 }
+
+
+# static config
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+# media config
+MEDIA_URL = '/media/'
+MEDIA_ROOT = str(BASE_DIR.joinpath('media'))
