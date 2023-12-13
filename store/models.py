@@ -7,6 +7,7 @@ from colorfield.fields import ColorField
 
 class Category(models.Model):
     sub_category = models.ForeignKey('self',
+                                     verbose_name='category',
                                      on_delete=models.PROTECT,
                                      null=True, blank=True,
                                      related_name='sub_cat'

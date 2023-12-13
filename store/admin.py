@@ -1,17 +1,25 @@
+from typing import Any
 from django.contrib import admin
+from django.http.request import HttpRequest
 from django.utils.html import format_html
-from django.db.models import Sum, Prefetch
+from django.db.models import QuerySet, Sum, Prefetch
 
 from . models import Category, Discount, Mobile, MobileVariety, Color, MobileImage
 
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
-    list_display = ['title', 'sub_category', 'is_sub']
+    list_display = ['title', 'parent_category', 'is_sub']
     search_fields = ['title']
     prepopulated_fields = {
         'slug': ['title', ]
     }
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('sub_category')
+
+    def parent_category(self, category):
+        return category.sub_category
 
 
 @admin.register(Color)
