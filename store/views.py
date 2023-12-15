@@ -4,8 +4,6 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.viewsets import ModelViewSet, GenericViewSet
 from rest_framework.mixins import ListModelMixin,  RetrieveModelMixin
-from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.filters import SearchFilter, OrderingFilter
 
 from .serializers import CategorySerializer, MobileSerializer
 from .models import Category, Mobile, MobileVariety
@@ -32,8 +30,6 @@ class MobileViewSet(RetrieveModelMixin,
                     ListModelMixin,
                     GenericViewSet):
     serializer_class = MobileSerializer
-    filter_backends = [SearchFilter, DjangoFilterBackend]
-    search_fields = ['name']
     lookup_field = 'slug'
 
     def get_queryset(self):
