@@ -4,40 +4,48 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.viewsets import ModelViewSet, GenericViewSet
 from rest_framework.mixins import ListModelMixin,  RetrieveModelMixin
+from django_filters.rest_framework import DjangoFilterBackend
 
-from .serializers import CategorySerializer, MobileSerializer
+
+from .filters import MobileFilter
+from .serializers import CategorySerializer, MobileSerializer, SubCategorySerializer
 from .models import Category, Mobile, MobileVariety
 
 
-class CategoryViewSet(RetrieveModelMixin,
-                    ListModelMixin,
+class CategoryViewSet(ListModelMixin,
                     GenericViewSet):
     serializer_class = CategorySerializer
-    queryset = Category.objects.all().filter(is_sub=False)
+    queryset = Category.objects.filter(is_sub=False).prefetch_related('sub_cat')
+    lookup_field = 'slug'
 
 
-class MobileCategoryViewSet(RetrieveModelMixin,
-                    ListModelMixin,
+class MobileCategoryViewSet(ListModelMixin,
                     GenericViewSet):
-    serializer_class = CategorySerializer
+    serializer_class = SubCategorySerializer
 
     def get_queryset(self):
-        category_pk = self.kwargs['category_pk']
-        return Category.objects.filter(sub_category__slug=category_pk).select_related('sub_category')
+        return Category.objects.filter(is_sub=True).prefetch_related('sub_cat')
 
 
 class MobileViewSet(RetrieveModelMixin,
                     ListModelMixin,
                     GenericViewSet):
     serializer_class = MobileSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = MobileFilter
     lookup_field = 'slug'
 
     def get_queryset(self):
-        brand_pk = self.kwargs['brand_pk']
-        return Mobile.objects.prefetch_related(
+        quertset = Mobile.objects.prefetch_related(
             'discount',
             Prefetch(
                 'mobile_vars',
                 queryset=MobileVariety.objects.select_related('color')
                 )
-        ).filter(category__slug=brand_pk)
+        )
+
+        category_slug_parameter = self.request.query_params.get('search')
+
+        if category_slug_parameter is not None:
+            quertset = quertset.filter(category__slug=category_slug_parameter)
+        return quertset

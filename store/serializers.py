@@ -22,13 +22,22 @@ class MobileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Mobile
-        fields = ['id', 'name', 'slug', 'description', 'discount', 'mobile_vars', 'available']
+        fields = ['id', 'name', 'slug',
+                  'description', 'picture_resolution',
+                  'os_version', 'screen_technology', 'accessories',
+                  'discount', 'mobile_vars', 'available']
 
 
-
-class CategorySerializer(serializers.ModelSerializer):
-    parent = serializers.CharField(max_length=50, source='sub_category')
+class SubCategorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Category
-        fields = ['id', 'title', 'slug', 'parent']
+        fields = ['id', 'title', 'slug']
+
+
+class CategorySerializer(serializers.ModelSerializer):
+    sub_cat = SubCategorySerializer(many=True)
+
+    class Meta:
+        model = Category
+        fields = ['id', 'title', 'slug', 'sub_cat']
