@@ -1,51 +1,61 @@
 from django.db.models import Prefetch
 
-from rest_framework.response import Response
-from rest_framework import status
-from rest_framework.viewsets import ModelViewSet, GenericViewSet
-from rest_framework.mixins import ListModelMixin,  RetrieveModelMixin
 from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.generics import ListAPIView, RetrieveAPIView
+from rest_framework.viewsets import ReadOnlyModelViewSet
 
-
+from store.utils import get_mobile_queryset
 from .filters import MobileFilter
-from .serializers import CategorySerializer, MobileSerializer, SubCategorySerializer
-from .models import Category, Mobile, MobileVariety
+from .serializers import CategoriesSerializer, MobileSerializer, SubCategorySerializer
+from .models import Category
 
 
-class CategoryViewSet(ListModelMixin,
-                    GenericViewSet):
-    serializer_class = CategorySerializer
-    queryset = Category.objects.filter(is_sub=False).prefetch_related('sub_cat')
+class CategoryViewSet(ReadOnlyModelViewSet):
+    """
+    A class to list all categories and retrieve their subcategories.
+    """
+    queryset = Category.objects.filter(is_sub=False).prefetch_related(
+            Prefetch(
+                'sub_cat',
+                queryset=Category.objects.prefetch_related('sub_cat')
+                )
+        )
+    lookup_field = 'slug'
+
+    # 
+    def get_serializer_class(self):
+        if 'slug' in self.kwargs:
+            return SubCategorySerializer
+        else:
+            return CategoriesSerializer
+
+
+class MobileViewSet(ReadOnlyModelViewSet):
+    """
+    Returns the list of all mobiles.
+    """
+    serializer_class = MobileSerializer
+    queryset = get_mobile_queryset()
     lookup_field = 'slug'
 
 
-class MobileCategoryViewSet(ListModelMixin,
-                    GenericViewSet):
-    serializer_class = SubCategorySerializer
-
-    def get_queryset(self):
-        return Category.objects.filter(is_sub=True).prefetch_related('sub_cat')
-
-
-class MobileViewSet(RetrieveModelMixin,
-                    ListModelMixin,
-                    GenericViewSet):
+class MobilesByBrand(ListAPIView):
+    """
+    Returns the list of all mobiles by brands and selected filters.
+    """
     serializer_class = MobileSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_class = MobileFilter
-    lookup_field = 'slug'
 
     def get_queryset(self):
-        quertset = Mobile.objects.prefetch_related(
-            'discount',
-            Prefetch(
-                'mobile_vars',
-                queryset=MobileVariety.objects.select_related('color')
-                )
-        )
-
-        category_slug_parameter = self.request.query_params.get('search')
-
-        if category_slug_parameter is not None:
-            quertset = quertset.filter(category__slug=category_slug_parameter)
-        return quertset
+        category_slug = self.kwargs['slug']
+        return get_mobile_queryset().filter(category__slug=category_slug)
+        
+    
+class MobileDetails(RetrieveAPIView):
+    """
+    Returns the details of selected mobiles.
+    """
+    serializer_class = MobileSerializer
+    lookup_field = 'slug'
+    queryset = get_mobile_queryset()

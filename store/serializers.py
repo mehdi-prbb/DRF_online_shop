@@ -28,16 +28,33 @@ class MobileSerializer(serializers.ModelSerializer):
                   'discount', 'mobile_vars', 'available']
 
 
-class SubCategorySerializer(serializers.ModelSerializer):
-
+class SecondLevelSubCategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
         fields = ['id', 'title', 'slug']
 
 
-class CategorySerializer(serializers.ModelSerializer):
-    sub_cat = SubCategorySerializer(many=True)
+class FirstLevelSubCategorySerializer(serializers.ModelSerializer):
+    sub_cat = SecondLevelSubCategorySerializer(many=True)
 
     class Meta:
         model = Category
         fields = ['id', 'title', 'slug', 'sub_cat']
+
+
+class CategoriesSerializer(serializers.ModelSerializer):
+    subsets = FirstLevelSubCategorySerializer(many=True, source='sub_cat')
+
+    class Meta:
+        model = Category
+        fields = ['id', 'title', 'slug', 'subsets']
+
+
+class SubCategorySerializer(serializers.ModelSerializer):
+    categories = SecondLevelSubCategorySerializer(many=True, source='sub_cat')
+
+    class Meta:
+        model = Category
+        fields = ['categories']
+
+

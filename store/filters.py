@@ -4,6 +4,9 @@ from .models import Mobile
 
 
 class MobileFilter(FilterSet):
+    """
+    A class to filter mobiles based on its own fields.
+    """
     unit_price = filters.RangeFilter(field_name = 'mobile_vars__unit_price', distinct=True)
     available = filters.BooleanFilter(field_name='available')
     # picture_resolution = filters.AllValuesFilter(field_name = 'picture_resolution')

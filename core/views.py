@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from store.models import Category, Mobile, MobileVariety
-from store.serializers import CategorySerializer, MobileSerializer
+from store.serializers import CategoriesSerializer, MobileSerializer
 
 
 class GlobalSearchView(APIView):
@@ -36,7 +36,7 @@ class GlobalSearchView(APIView):
 
             # Serialize models
             mobile_serializer = MobileSerializer(mobiles, many=True)
-            category_serializer = CategorySerializer(categories, many=True)
+            category_serializer = CategoriesSerializer(categories, many=True)
 
             # Adds serialized models to the result if exist
             if mobile_serializer.data:
