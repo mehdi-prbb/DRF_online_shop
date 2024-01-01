@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Category, Color, Mobile, MobileVariety
+from .models import Category, Color, Mobile, MobileImage, MobileVariety
 
 
 class MobileColorSerializer(serializers.ModelSerializer):
@@ -17,14 +17,21 @@ class MobileVaritySerializer(serializers.ModelSerializer):
         fields = ['unit_price', 'inventory', 'color']
 
 
+class ImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MobileImage
+        fields = ['image']
+
+
 class MobileSerializer(serializers.ModelSerializer):
     mobile_vars = MobileVaritySerializer(many=True)
+    images = ImageSerializer(many=True, source='mobile_images')
 
     class Meta:
         model = Mobile
         fields = ['id', 'name', 'slug',
-                  'description', 'picture_resolution',
-                  'os_version', 'screen_technology', 'accessories',
+                  'description', 'images', 'picture_resolution',
+                  'screen_technology', 'accessories',
                   'discount', 'mobile_vars', 'available']
 
 

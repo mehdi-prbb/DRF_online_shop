@@ -35,17 +35,17 @@ class MobileViewSet(ReadOnlyModelViewSet):
     Returns the list of all mobiles.
     """
     serializer_class = MobileSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = MobileFilter
     queryset = get_mobile_queryset()
     lookup_field = 'slug'
 
 
 class MobilesByBrand(ListAPIView):
     """
-    Returns the list of all mobiles by brands and selected filters.
+    Returns the list of mobiles by brands.
     """
     serializer_class = MobileSerializer
-    filter_backends = [DjangoFilterBackend]
-    filterset_class = MobileFilter
 
     def get_queryset(self):
         category_slug = self.kwargs['slug']

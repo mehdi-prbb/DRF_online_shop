@@ -58,10 +58,19 @@ class Product(models.Model):
 
 
 class Mobile(Product):
-    screen_technology = models.CharField(max_length=50)
-    picture_resolution = models.CharField(max_length=50)
-    os_version = models.CharField(max_length=50)
+    networks = models.CharField(max_length=50)
+    memory_card_support = models.CharField(max_length=50)
+    sim_card_number = models.CharField(max_length=50)
+    sim_description = models.CharField(max_length=50)
+    backs_camera = models.CharField(max_length=50)
+    internal_memory = models.CharField(max_length=50)
+    ram = models.CharField(max_length=50)
+    video_format_support = models.CharField(max_length=50)
     size = models.CharField(max_length=50)
+    screen_technology = models.CharField(max_length=50)
+    screen_size = models.CharField(max_length=50)
+    picture_resolution = models.CharField(max_length=50)
+    os_type = models.CharField(max_length=50)
     accessories = models.CharField(max_length=50)
 
     def __str__(self):
