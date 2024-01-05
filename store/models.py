@@ -118,11 +118,32 @@ class MobileVariety(models.Model):
     
     def __str__(self):
         return ''
+
+
+class MobileComment(models.Model):
+    COMMENT_STATUS_WAITING = 'w'
+    COMMENT_STATUS_APPROVED = 'a'
+    COMMENT_STATUS_NOT_APPROVED = 'na'
+    COMMENT_STATUS = [
+        (COMMENT_STATUS_WAITING, 'Waiting'),
+        (COMMENT_STATUS_APPROVED, 'Approved'),
+        (COMMENT_STATUS_NOT_APPROVED, 'Not Approved'),
+    ]
+
+    mobile = models.ForeignKey(Mobile, on_delete=models.CASCADE, related_name='mobile_comments')
+    title = models.CharField(max_length=255)
+    body = models.TextField()
+    datetime_created = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(max_length=2, choices=COMMENT_STATUS, default=COMMENT_STATUS_WAITING)
     
     
 class Customer(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
     birth_date = models.DateField(null=True, blank=True)
+
+    def __str__(self):
+        return self.user.phone_number
+    
 
     
     

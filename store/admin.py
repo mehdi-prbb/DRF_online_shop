@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.utils.html import format_html
 from django.db.models import Sum, Prefetch
 
-from . models import Category, Customer, Discount, Mobile, MobileVariety, Color, MobileImage
+from . models import Category, Customer, Discount, Mobile, MobileComment, MobileVariety, Color, MobileImage
 
 
 @admin.register(Category)
@@ -163,6 +163,19 @@ class MobileAdmin(admin.ModelAdmin):
             request,
             f'The mobile {" , ".join(mobile_names)} availabled'
         )
+
+
+@admin.register(MobileComment)
+class CommentAdmin(admin.ModelAdmin):
+    list_display = ['id', 'mobile_name', 'status', 'datetime_created']
+    list_per_page = 10
+    list_editable = ['status']
+    autocomplete_fields = ['mobile' ]
+
+    @admin.display(ordering='mobile__name')
+    def mobile_name(self, comment):
+        return comment.mobile.name
+
 
 
 @admin.register(Customer)
