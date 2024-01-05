@@ -1,10 +1,8 @@
-from typing import Any
 from django.contrib import admin
-from django.http.request import HttpRequest
 from django.utils.html import format_html
-from django.db.models import QuerySet, Sum, Prefetch
+from django.db.models import Sum, Prefetch
 
-from . models import Category, Discount, Mobile, MobileVariety, Color, MobileImage
+from . models import Category, Customer, Discount, Mobile, MobileVariety, Color, MobileImage
 
 
 @admin.register(Category)
@@ -165,3 +163,29 @@ class MobileAdmin(admin.ModelAdmin):
             request,
             f'The mobile {" , ".join(mobile_names)} availabled'
         )
+
+
+@admin.register(Customer)
+class CustomerAdmin(admin.ModelAdmin):
+    list_display = ['phone_number', 'first_name', 'last_name', 'email']
+    list_per_page = 10
+    search_fields = ['user__phone_number', 'user__first_name', 'user__last_name', 'user__email']
+
+    def get_queryset(self, request):
+        return Customer.objects.select_related('user')
+
+    @admin.display(ordering='user__phone_number')
+    def phone_number(self, customer):
+        return customer.user.phone_number
+    
+    @admin.display(ordering='user__first_name')
+    def first_name(self, customer):
+        return customer.user.first_name
+    
+    @admin.display(ordering='user__last_name')
+    def last_name(self, customer):
+        return customer.user.last_name
+    
+    @admin.display(ordering='user__email')
+    def email(self, customer):
+        return customer.user.email

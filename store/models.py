@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 from django.core.validators import MinValueValidator 
 
@@ -119,6 +120,10 @@ class MobileVariety(models.Model):
         return ''
     
     
+class Customer(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    birth_date = models.DateField(null=True, blank=True)
+
     
     
     
