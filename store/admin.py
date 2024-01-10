@@ -1,6 +1,11 @@
+from typing import Any
 from django.contrib import admin
+from django.db.models.query import QuerySet
+from django.http.request import HttpRequest
 from django.utils.html import format_html
 from django.db.models import Sum, Prefetch
+from django.db import models
+from django import forms
 
 from . models import Category, Customer, Discount, Mobile, MobileComment, MobileVariety, Color, MobileImage
 
@@ -62,6 +67,25 @@ class MobileImageInline(admin.TabularInline):
     fields = ['name', 'image']
     extra = 0
     min_num = 1
+    
+
+
+
+class MobileCommentAdmin(admin.TabularInline):
+    """
+    Show comments for each mobile in tabular inline format.
+    """
+    model = MobileComment
+    fields = ['id', 'owner', 'title', 'body', 'status',]
+    extra = 0
+    min_num = 1
+    ordering = ['-status']
+    
+    formfield_overrides = {
+        models.TextField: {'widget': forms.Textarea(attrs={'rows': 3, 'cols': 30})},
+    }
+    # TODO improve comments querysets
+
 
 
 class InventoryFilter(admin.SimpleListFilter):
@@ -96,24 +120,32 @@ class MobileAdmin(admin.ModelAdmin):
     list_display = [
                     'id', 'name', 'category',
                     'mobile_variety','total_inventory',
-                    'available', 'datetime_created'
+                    'available', 'datetime_created',
                     ]
     list_per_page = 10
     list_filter = [InventoryFilter, 'datetime_created', 'available']
     search_fields = ['name', 'category__title']
     autocomplete_fields = ['category', 'discount']
-    inlines = [MobileVarietyInline, MobileImageInline]
+    inlines = [MobileVarietyInline, MobileImageInline, MobileCommentAdmin]
     actions = ['make_unavailable', 'make_available']
     prepopulated_fields = {
         'slug': ['name', ]
     }
+    formfield_overrides = {
+        models.TextField: {'widget': forms.Textarea(attrs={'rows': 3, 'cols': 30})},
+    }
 
     def get_queryset(self, request):
-        return Mobile.objects.select_related('category__sub_category').annotate(
-            total_inventory=Sum('mobile_vars__inventory')
-        ).prefetch_related(
-            Prefetch('mobile_vars', queryset=MobileVariety.objects.select_related('color'))
-        )
+        return Mobile.objects.select_related('category__sub_category') \
+        .prefetch_related(
+            Prefetch(
+                'mobile_vars',
+                queryset=MobileVariety.objects.select_related('color')
+                )
+        ).annotate(
+            total_inventory=Sum('mobile_vars__inventory'),
+                   )
+
 
     @admin.display(description='#variety')
     def mobile_variety(self, mobile):
@@ -163,19 +195,6 @@ class MobileAdmin(admin.ModelAdmin):
             request,
             f'The mobile {" , ".join(mobile_names)} availabled'
         )
-
-
-@admin.register(MobileComment)
-class CommentAdmin(admin.ModelAdmin):
-    list_display = ['id', 'mobile_name', 'status', 'datetime_created']
-    list_per_page = 10
-    list_editable = ['status']
-    autocomplete_fields = ['mobile' ]
-
-    @admin.display(ordering='mobile__name')
-    def mobile_name(self, comment):
-        return comment.mobile.name
-
 
 
 @admin.register(Customer)

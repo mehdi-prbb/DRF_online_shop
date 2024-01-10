@@ -130,11 +130,16 @@ class MobileComment(models.Model):
         (COMMENT_STATUS_NOT_APPROVED, 'Not Approved'),
     ]
 
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='comment_owner')
     mobile = models.ForeignKey(Mobile, on_delete=models.CASCADE, related_name='mobile_comments')
     title = models.CharField(max_length=255)
     body = models.TextField()
     datetime_created = models.DateTimeField(auto_now_add=True)
     status = models.CharField(max_length=2, choices=COMMENT_STATUS, default=COMMENT_STATUS_WAITING)
+
+    def __str__(self):
+        return ''
+    
     
     
 class Customer(models.Model):
