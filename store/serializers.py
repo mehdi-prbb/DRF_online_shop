@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Category, Color, Mobile, MobileComment, MobileImage, MobileVariety
+from .models import Category, Color, Mobile, Comment, MobileImage, MobileVariety
 
 
 class MobileColorSerializer(serializers.ModelSerializer):
@@ -35,11 +35,11 @@ class MobileSerializer(serializers.ModelSerializer):
                   'discount', 'mobile_vars', 'available']
 
 
-class MobileCommentsSerializer(serializers.ModelSerializer):
+class CommentsSerializer(serializers.ModelSerializer):
     owner = serializers.SerializerMethodField()
 
     class Meta:
-        model = MobileComment
+        model = Comment
         fields = ['id', 'title', 'body', 'owner', 'datetime_created']
 
     def get_owner(self, obj):
@@ -57,12 +57,12 @@ class MobileCommentsSerializer(serializers.ModelSerializer):
         mobile_slug = self.context['mobile_slug']
 
         try:
-            validated_data['mobile'] = Mobile.objects.get(slug=mobile_slug)
+            validated_data['content_object'] = Mobile.objects.get(slug=mobile_slug)
         except Mobile.DoesNotExist:
-            raise serializers.ValidationError(f"Mobile with slug '{mobile_slug} does not exist.")
+            raise serializers.ValidationError(f"Mobile with slug {mobile_slug} does not exist.")
         
         validated_data['owner'] = self.context['user']
-        return MobileComment.objects.create(**validated_data)
+        return Comment.objects.create(**validated_data)
     
 
 

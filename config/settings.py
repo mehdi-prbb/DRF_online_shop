@@ -94,11 +94,12 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'drf_online_shop',
-        'HOST': 'localhost',
-        'USER': 'root',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'drf_shop',
+        'USER': 'mehdi',
         'PASSWORD': 'm1371521p',
+        'HOST': 'localhost',
+        'PORT': 5432
     }
 }
 

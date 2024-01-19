@@ -6,7 +6,6 @@ name = "pypi"
 [packages]
 django = "*"
 django-debug-toolbar = "*"
-mysqlclient = "2.1.0"
 djangorestframework = "*"
 drf-nested-routers = "*"
 django-filter = "*"
@@ -14,6 +13,7 @@ djoser = "*"
 djangorestframework-simplejwt = "*"
 drf-spectacular = "*"
 django-colorfield = "*"
+psycopg2-binary = "*"
 
 [dev-packages]
 

@@ -1,5 +1,7 @@
 from django.conf import settings
 from django.db import models
+from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
+from django.contrib.contenttypes.models import ContentType
 from django.core.validators import MinValueValidator 
 
 from colorfield.fields import ColorField
@@ -56,6 +58,29 @@ class Product(models.Model):
 
     def __str__(self):
         return self.name
+    
+
+class Comment(models.Model):
+    COMMENT_STATUS_WAITING = 'w'
+    COMMENT_STATUS_APPROVED = 'a'
+    COMMENT_STATUS_NOT_APPROVED = 'na'
+    COMMENT_STATUS = [
+        (COMMENT_STATUS_WAITING, 'Waiting'),
+        (COMMENT_STATUS_APPROVED, 'Approved'),
+        (COMMENT_STATUS_NOT_APPROVED, 'Not Approved'),
+    ]
+
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='comment_owner')
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.PositiveIntegerField()
+    content_object = GenericForeignKey('content_type', 'object_id')
+    title = models.CharField(max_length=255)
+    body = models.TextField()
+    datetime_created = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(max_length=2, choices=COMMENT_STATUS, default=COMMENT_STATUS_WAITING)
+
+    def __str__(self):
+        return ''
 
 
 class Mobile(Product):
@@ -73,7 +98,8 @@ class Mobile(Product):
     picture_resolution = models.CharField(max_length=50)
     os_type = models.CharField(max_length=50)
     accessories = models.CharField(max_length=50)
-
+    comments = GenericRelation(Comment)
+    
     def __str__(self):
         return self.name
     
@@ -90,7 +116,7 @@ class MobileImage(models.Model):
     name = models.CharField(max_length=50)
     image = models.ImageField(upload_to='images/')
     mobile = models.ForeignKey(
-                                Mobile, on_delete=models.PROTECT,
+                                Mobile, on_delete=models.CASCADE,
                                 related_name='mobile_images'
                             )
 
@@ -118,28 +144,6 @@ class MobileVariety(models.Model):
     
     def __str__(self):
         return ''
-
-
-class MobileComment(models.Model):
-    COMMENT_STATUS_WAITING = 'w'
-    COMMENT_STATUS_APPROVED = 'a'
-    COMMENT_STATUS_NOT_APPROVED = 'na'
-    COMMENT_STATUS = [
-        (COMMENT_STATUS_WAITING, 'Waiting'),
-        (COMMENT_STATUS_APPROVED, 'Approved'),
-        (COMMENT_STATUS_NOT_APPROVED, 'Not Approved'),
-    ]
-
-    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='comment_owner')
-    mobile = models.ForeignKey(Mobile, on_delete=models.CASCADE, related_name='mobile_comments')
-    title = models.CharField(max_length=255)
-    body = models.TextField()
-    datetime_created = models.DateTimeField(auto_now_add=True)
-    status = models.CharField(max_length=2, choices=COMMENT_STATUS, default=COMMENT_STATUS_WAITING)
-
-    def __str__(self):
-        return ''
-    
     
     
 class Customer(models.Model):

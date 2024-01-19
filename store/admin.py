@@ -1,13 +1,11 @@
-from typing import Any
 from django.contrib import admin
-from django.db.models.query import QuerySet
-from django.http.request import HttpRequest
+from django.contrib.contenttypes.admin import GenericTabularInline
 from django.utils.html import format_html
 from django.db.models import Sum, Prefetch
 from django.db import models
 from django import forms
 
-from . models import Category, Customer, Discount, Mobile, MobileComment, MobileVariety, Color, MobileImage
+from .models import Category, Customer, Discount, Mobile, Comment, MobileVariety, Color, MobileImage
 
 
 @admin.register(Category)
@@ -67,25 +65,6 @@ class MobileImageInline(admin.TabularInline):
     fields = ['name', 'image']
     extra = 0
     min_num = 1
-    
-
-
-
-class MobileCommentAdmin(admin.TabularInline):
-    """
-    Show comments for each mobile in tabular inline format.
-    """
-    model = MobileComment
-    fields = ['id', 'owner', 'title', 'body', 'status',]
-    extra = 0
-    min_num = 1
-    ordering = ['-status']
-    
-    formfield_overrides = {
-        models.TextField: {'widget': forms.Textarea(attrs={'rows': 3, 'cols': 30})},
-    }
-    # TODO improve comments querysets
-
 
 
 class InventoryFilter(admin.SimpleListFilter):
@@ -113,6 +92,16 @@ class InventoryFilter(admin.SimpleListFilter):
             return queryset.filter(total_inventory__range=(3, 10))
         if self.value() == InventoryFilter.MORE_THAN_10:
             return queryset.filter(total_inventory__gt=10)
+        
+
+class CommentInline(GenericTabularInline):
+    model = Comment
+    extra = 0
+    min_num = 1
+
+    formfield_overrides = {
+        models.TextField: {'widget': forms.Textarea(attrs={'rows': 3, 'cols': 30})},
+    }
 
 
 @admin.register(Mobile)
@@ -126,11 +115,12 @@ class MobileAdmin(admin.ModelAdmin):
     list_filter = [InventoryFilter, 'datetime_created', 'available']
     search_fields = ['name', 'category__title']
     autocomplete_fields = ['category', 'discount']
-    inlines = [MobileVarietyInline, MobileImageInline, MobileCommentAdmin]
+    inlines = [MobileVarietyInline, MobileImageInline, CommentInline]
     actions = ['make_unavailable', 'make_available']
     prepopulated_fields = {
         'slug': ['name', ]
     }
+
     formfield_overrides = {
         models.TextField: {'widget': forms.Textarea(attrs={'rows': 3, 'cols': 30})},
     }

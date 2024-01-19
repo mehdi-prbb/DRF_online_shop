@@ -1,4 +1,5 @@
 from django.db.models import Prefetch
+from django.shortcuts import get_object_or_404
 
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.generics import ListAPIView
@@ -9,8 +10,8 @@ from rest_framework.permissions import IsAuthenticated, AllowAny, IsAuthenticate
 from .permissions import IsOwnerOrReadonly
 from .utils import get_mobile_queryset
 from .filters import MobileFilter
-from .serializers import CategoriesSerializer, MobileCommentsSerializer, MobileSerializer, SubCategorySerializer
-from .models import Category, MobileComment
+from .serializers import CategoriesSerializer, CommentsSerializer, MobileSerializer, SubCategorySerializer
+from .models import Category, Comment, Mobile
 
 
 class CategoryViewSet(ReadOnlyModelViewSet):
@@ -55,7 +56,7 @@ class MobilesByBrand(ListAPIView):
         return get_mobile_queryset().filter(category__slug=category_slug)
         
 
-class MobileCommentsViewSet(CreateModelMixin,
+class CommentsViewSet(CreateModelMixin,
                   RetrieveModelMixin,
                   ListModelMixin,
                   DestroyModelMixin,
@@ -63,22 +64,20 @@ class MobileCommentsViewSet(CreateModelMixin,
     """
     A class to leave, list, retrieve and delete comments.
     """
-    serializer_class = MobileCommentsSerializer
+    serializer_class = CommentsSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]
     ordering = ['-datetime_created']
 
     def get_queryset(self):
         mobile_slug = self.kwargs['mobile_slug']
-        return MobileComment.objects.filter(mobile__slug=mobile_slug, status='a').\
+        mobile = get_object_or_404(Mobile, slug=mobile_slug)
+        return Comment.objects.filter(content_type__model='mobile', object_id=mobile.id, status='a').\
             order_by('-datetime_created').select_related('owner')
-    
-    def get_permissions(self): 
-        # IsOwnerOrReadonly limit the delete option
-        # so that each user can only delete their own comment.
-        # IsAuthenticatedOrReadOnly allow authenticated users
-        # to leave comment otherwise just see comments.
+
+    def get_permissions(self):
         if self.request.method == 'DELETE':
             return [IsOwnerOrReadonly()]
-        return [IsAuthenticatedOrReadOnly()]
+        return super().get_permissions()
 
     def get_serializer_context(self):
         return {

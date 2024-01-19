@@ -9,7 +9,7 @@ router.register('categories', views.CategoryViewSet, basename='category')
 router.register('landing-mobiles', views.MobileViewSet, basename='mobile-list')
 
 product_router = routers.NestedDefaultRouter(router, 'landing-mobiles', lookup='mobile')
-product_router.register('comments', views.MobileCommentsViewSet, basename='mobile-comments')
+product_router.register('comments', views.CommentsViewSet, basename='comments')
 
 
 urlpatterns = [
