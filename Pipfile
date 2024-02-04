@@ -4,7 +4,6 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-django = "*"
 django-debug-toolbar = "*"
 djangorestframework = "*"
 drf-nested-routers = "*"
@@ -14,6 +13,7 @@ djangorestframework-simplejwt = "*"
 drf-spectacular = "*"
 django-colorfield = "*"
 psycopg2-binary = "*"
+django = "*"
 
 [dev-packages]
 

@@ -8,10 +8,9 @@ from rest_framework.mixins import ListModelMixin, RetrieveModelMixin, DestroyMod
 from rest_framework.permissions import IsAuthenticated, AllowAny, IsAuthenticatedOrReadOnly
 
 from .permissions import IsOwnerOrReadonly
-from .utils import get_mobile_queryset
 from .filters import MobileFilter
 from .serializers import CategoriesSerializer, CommentsSerializer, MobileSerializer, SubCategorySerializer
-from .models import Category, Comment, Mobile
+from .models import Category, Comment, Mobile, Variety
 
 
 class CategoryViewSet(ReadOnlyModelViewSet):
@@ -40,9 +39,15 @@ class MobileViewSet(ReadOnlyModelViewSet):
     """
     serializer_class = MobileSerializer
     filter_backends = [DjangoFilterBackend]
-    filterset_class = MobileFilter
-    queryset = get_mobile_queryset()
     lookup_field = 'slug'
+
+    def get_queryset(self):
+        return Mobile.objects.prefetch_related('discount', 'images',
+            Prefetch(
+                'varieties',
+                queryset=Variety.objects.select_related('color')
+                )
+            )
 
 
 class MobilesByBrand(ListAPIView):
@@ -53,7 +58,12 @@ class MobilesByBrand(ListAPIView):
 
     def get_queryset(self):
         category_slug = self.kwargs['slug']
-        return get_mobile_queryset().filter(category__slug=category_slug)
+        return Mobile.objects.prefetch_related('discount', 'images',
+            Prefetch(
+                'varieties',
+                queryset=Variety.objects.select_related('color')
+                )
+            ).filter(category__slug=category_slug)
         
 
 class CommentsViewSet(CreateModelMixin,
@@ -71,7 +81,7 @@ class CommentsViewSet(CreateModelMixin,
     def get_queryset(self):
         mobile_slug = self.kwargs['mobile_slug']
         mobile = get_object_or_404(Mobile, slug=mobile_slug)
-        return Comment.objects.filter(content_type__model='mobile', object_id=mobile.id, status='a').\
+        return mobile.comments.filter(status='a').\
             order_by('-datetime_created').select_related('owner')
 
     def get_permissions(self):

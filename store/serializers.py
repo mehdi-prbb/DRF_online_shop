@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Category, Color, Mobile, Comment, MobileImage, MobileVariety
+from .models import Category, Color, Mobile, Comment, Image, Variety
 
 
 class MobileColorSerializer(serializers.ModelSerializer):
@@ -9,30 +9,35 @@ class MobileColorSerializer(serializers.ModelSerializer):
         fields = ['name', 'code']
 
 
-class MobileVaritySerializer(serializers.ModelSerializer):
+class VaritySerializer(serializers.ModelSerializer):
     color = MobileColorSerializer()
 
     class Meta:
-        model = MobileVariety
+        model = Variety
         fields = ['unit_price', 'inventory', 'color']
 
 
-class ImageSerializer(serializers.ModelSerializer):
+class Serializer(serializers.ModelSerializer):
     class Meta:
-        model = MobileImage
+        model = Image
         fields = ['image']
 
 
 class MobileSerializer(serializers.ModelSerializer):
-    mobile_vars = MobileVaritySerializer(many=True)
-    images = ImageSerializer(many=True, source='mobile_images')
+    varieties = VaritySerializer(many=True)
+    images = Serializer(many=True)
 
     class Meta:
         model = Mobile
-        fields = ['id', 'name', 'slug',
-                  'description', 'images', 'picture_resolution',
-                  'screen_technology', 'accessories',
-                  'discount', 'mobile_vars', 'available']
+        fields = ['id', 'name', 'description', 'slug',
+                  'networks', 'memory_card_support',
+                  'sim_card_number', 'sim_description',
+                  'backs_camera', 'internal_memory',
+                  'ram', 'video_format_support',
+                  'size', 'screen_size', 'screen_size',
+                  'picture_resolution','screen_technology',
+                  'accessories', 'images','varieties',
+                  'discount', 'available']
 
 
 class CommentsSerializer(serializers.ModelSerializer):
@@ -59,11 +64,10 @@ class CommentsSerializer(serializers.ModelSerializer):
         try:
             validated_data['content_object'] = Mobile.objects.get(slug=mobile_slug)
         except Mobile.DoesNotExist:
-            raise serializers.ValidationError(f"Mobile with slug {mobile_slug} does not exist.")
+            raise serializers.ValidationError(f"Product with slug {mobile_slug} does not exist.")
         
         validated_data['owner'] = self.context['user']
         return Comment.objects.create(**validated_data)
-    
 
 
 class SecondLevelSubCategorySerializer(serializers.ModelSerializer):

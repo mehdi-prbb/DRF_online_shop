@@ -4,7 +4,7 @@ from django.db.models import Prefetch
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from store.models import Category, Mobile, MobileVariety
+from store.models import Category, Mobile, Variety
 from store.serializers import CategoriesSerializer, MobileSerializer
 
 
@@ -26,7 +26,7 @@ class GlobalSearchView(APIView):
                 'discount',
                 Prefetch(
                     'mobile_vars',
-                    queryset=MobileVariety.objects.select_related('color')
+                    queryset=Variety.objects.select_related('color')
                 )
             )
 

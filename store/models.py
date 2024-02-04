@@ -1,8 +1,11 @@
 from django.conf import settings
-from django.db import models
+from django.db import models, IntegrityError
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.core.validators import MinValueValidator 
+from django.core.exceptions import ValidationError
+from django.contrib import messages
+from django.db.models import Q
 
 from colorfield.fields import ColorField
 
@@ -70,17 +73,70 @@ class Comment(models.Model):
         (COMMENT_STATUS_NOT_APPROVED, 'Not Approved'),
     ]
 
-    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='comment_owner')
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+                              related_name='comment_owner')
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
     object_id = models.PositiveIntegerField()
     content_object = GenericForeignKey('content_type', 'object_id')
     title = models.CharField(max_length=255)
     body = models.TextField()
     datetime_created = models.DateTimeField(auto_now_add=True)
-    status = models.CharField(max_length=2, choices=COMMENT_STATUS, default=COMMENT_STATUS_WAITING)
+    status = models.CharField(max_length=2, choices=COMMENT_STATUS,
+                              default=COMMENT_STATUS_WAITING)
 
     def __str__(self):
+        return self.owner.phone_number
+    
+
+class Color(models.Model):
+    name = models.CharField(max_length=50, unique=True)
+    code = ColorField(default='FF0000', unique=True)
+
+    def __str__(self):
+        return self.name
+    
+
+class Variety(models.Model):
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.PositiveIntegerField()
+    content_object = GenericForeignKey('content_type', 'object_id')
+    color = models.ForeignKey(
+                              Color, on_delete=models.CASCADE,
+                              related_name='colors'
+                              )
+    unit_price = models.IntegerField()
+    inventory = models.PositiveIntegerField(
+                                            default=1,
+                                            validators=[MinValueValidator(1)]
+                                            )
+    def clean(self):
+        color = self.color.id
+        existing_color = Variety.objects.filter(object_id=self.object_id).values()
+
+        print(color)
+        print(existing_color)
+
+        for items in existing_color:
+
+            print(items['color_id'])
+        
+            if color == items['color_id']:
+                raise ValidationError({'color':'This color already exists.'})
+    
+    
+    def __str__(self):
         return ''
+
+
+class Image(models.Model):
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.PositiveIntegerField()
+    content_object = GenericForeignKey('content_type', 'object_id')
+    name = models.CharField(max_length=50)
+    image = models.ImageField(upload_to='images/')
+
+    def __str__(self):
+        return self.name
 
 
 class Mobile(Product):
@@ -99,55 +155,16 @@ class Mobile(Product):
     os_type = models.CharField(max_length=50)
     accessories = models.CharField(max_length=50)
     comments = GenericRelation(Comment)
+    varieties = GenericRelation(Variety)
+    images = GenericRelation(Image)
     
     def __str__(self):
         return self.name
-    
-
-class Color(models.Model):
-    name = models.CharField(max_length=50, unique=True)
-    code = ColorField(default='FF0000', unique=True)
-
-    def __str__(self):
-        return self.name
-    
-
-class MobileImage(models.Model):
-    name = models.CharField(max_length=50)
-    image = models.ImageField(upload_to='images/')
-    mobile = models.ForeignKey(
-                                Mobile, on_delete=models.CASCADE,
-                                related_name='mobile_images'
-                            )
-
-    def __str__(self):
-        return self.name
-    
-
-class MobileVariety(models.Model):
-    mobile = models.ForeignKey(
-                               Mobile, on_delete=models.CASCADE,
-                               related_name='mobile_vars'
-                               )
-    color = models.ForeignKey(
-                              Color, on_delete=models.CASCADE,
-                              related_name='mobile_colors'
-                              )
-    unit_price = models.IntegerField()
-    inventory = models.PositiveIntegerField(
-                                            default=1,
-                                            validators=[MinValueValidator(1)]
-                                            )
-
-    class Meta:
-        unique_together = [['color', 'mobile']]
-    
-    def __str__(self):
-        return ''
     
     
 class Customer(models.Model):
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    user = models.OneToOneField(settings.AUTH_USER_MODEL,
+                                on_delete=models.PROTECT)
     birth_date = models.DateField(null=True, blank=True)
 
     def __str__(self):
