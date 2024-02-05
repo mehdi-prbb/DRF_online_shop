@@ -1,4 +1,6 @@
 from django.contrib import admin
+from django.urls import reverse
+from django.utils.http import urlencode
 from django.contrib.contenttypes.admin import GenericTabularInline
 from django.utils.html import format_html
 from django.db.models import Sum, Prefetch
@@ -9,6 +11,30 @@ from django.db import IntegrityError
 # from .forms import ColorValidation
 
 from .models import Category, Customer, Discount, Mobile, Comment, Variety, Color, Image
+
+@admin.register(Comment)
+class CommentAdmmin(admin.ModelAdmin):
+    list_display = ['id', 'short_title', 'owner', 'status', 'datetime_created']
+    readonly_fields = ['owner', 'title', 'body']
+    list_editable = ['status']
+    exclude = ['content_type', 'object_id']
+
+
+    @admin.display(ordering='title', description='title')
+    def short_title(self, comment):
+        return comment.title[:50]
+
+    def get_model_perms(self, request):
+        """
+        Hide comments from list of store app
+        """
+        return {}
+
+    def has_add_permission(self, request, obj=None):
+        """
+        Disable add comments from admin panel
+        """
+        return False
 
 
 @admin.register(Category)
@@ -107,19 +133,6 @@ class InventoryFilter(admin.SimpleListFilter):
             return queryset.filter(total_inventory__gt=10)
         
 
-class CommentInline(GenericTabularInline):
-    model = Comment
-    extra = 0
-    min_num = 1
-    ordering = ('-status',)
-
-    def get_queryset(self, request):
-        return super().get_queryset(request).select_related('owner')
-
-    formfield_overrides = {
-        models.TextField: {'widget': forms.Textarea(attrs={'rows': 3, 'cols': 30})},
-    }
-
 
 @admin.register(Mobile)
 class MobileAdmin(admin.ModelAdmin):
@@ -127,12 +140,14 @@ class MobileAdmin(admin.ModelAdmin):
                     'id', 'name', 'category',
                     'mobile_variety','total_inventory',
                     'available', 'datetime_created',
+                    'num_of_comments'
                     ]
     list_per_page = 10
     list_filter = [InventoryFilter, 'datetime_created', 'available']
     search_fields = ['name', 'category__title']
     autocomplete_fields = ['category', 'discount']
-    inlines = [VarietyInline, ImageInline, CommentInline]
+    show_facets = admin.ShowFacets.NEVER
+    inlines = [VarietyInline, ImageInline,]
     actions = ['make_unavailable', 'make_available']
     prepopulated_fields = {
         'slug': ['name', ]
@@ -151,7 +166,18 @@ class MobileAdmin(admin.ModelAdmin):
                 )
         ).annotate(
             total_inventory=Sum('varieties__inventory'),
-                   )
+                    )
+    
+    @admin.display(description='# COMMENTS')
+    def num_of_comments(self, obj):
+        url = (
+            reverse('admin:store_comment_changelist')
+            + '?'
+            + urlencode({
+                'object_id': obj.id
+            })
+        )
+        return format_html('<a href="{}">{}</a>',url , 'SEE')
 
 
     @admin.display(description='#variety')
