@@ -1,14 +1,12 @@
+from collections.abc import Iterable
 from django.conf import settings
-from django.db import models, IntegrityError
+from django.db import models
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.core.validators import MinValueValidator 
 from django.core.exceptions import ValidationError
-from django.contrib import messages
-from django.db.models import Q
 
 from colorfield.fields import ColorField
-
 
 
 class Category(models.Model):
@@ -123,7 +121,6 @@ class Variety(models.Model):
             if color == items['color_id']:
                 raise ValidationError({'color':'This color already exists.'})
     
-    
     def __str__(self):
         return ''
 
@@ -169,6 +166,35 @@ class Customer(models.Model):
 
     def __str__(self):
         return self.user.phone_number
+    
+
+class Order(models.Model):
+    ORDER_STATUS_PAID = 'p'
+    ORDER_STATUS_UNPAID = 'u'
+    ORDER_STATUS_CANCELED = 'c'
+    ORDER_STATUS = [
+        (ORDER_STATUS_PAID,'Paid'),
+        (ORDER_STATUS_UNPAID,'Unpaid'),
+        (ORDER_STATUS_CANCELED,'Canceled'),
+    ]
+
+    customer = models.ForeignKey(Customer, on_delete=models.PROTECT, related_name='orders')
+    datetime_created = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(max_length=1, choices=ORDER_STATUS, default=ORDER_STATUS_UNPAID)
+
+    def __str__(self):
+        return self.customer.user.phone_number
+
+
+class OrderItem(models.Model):
+    order = models.ForeignKey(Order, on_delete=models.PROTECT, related_name='items')
+    content_type = models.ForeignKey(ContentType, on_delete=models.PROTECT)
+    object_id = models.PositiveIntegerField()
+    content_object = GenericForeignKey('content_type', 'object_id')
+    quantity = models.PositiveSmallIntegerField()
+    unit_peice = models.IntegerField()
+
+    
     
 
     

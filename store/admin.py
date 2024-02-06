@@ -10,7 +10,14 @@ from django.db import IntegrityError
 
 # from .forms import ColorValidation
 
-from .models import Category, Customer, Discount, Mobile, Comment, Variety, Color, Image
+from .models import (
+                    Category, Customer, Discount,
+                    Mobile, Comment, Variety, Color,
+                    Image, Order, OrderItem
+                    )
+
+admin.site.register(Order)
+admin.site.register(OrderItem)
 
 @admin.register(Comment)
 class CommentAdmmin(admin.ModelAdmin):
@@ -18,6 +25,7 @@ class CommentAdmmin(admin.ModelAdmin):
     readonly_fields = ['owner', 'title', 'body']
     list_editable = ['status']
     exclude = ['content_type', 'object_id']
+    list_per_page = 10
 
 
     @admin.display(ordering='title', description='title')
@@ -41,6 +49,7 @@ class CommentAdmmin(admin.ModelAdmin):
 class CategoryAdmin(admin.ModelAdmin):
     list_display = ['title', 'parent_category', 'is_sub']
     search_fields = ['title']
+    list_per_page = 10
     prepopulated_fields = {
         'slug': ['title', ]
     }
@@ -56,6 +65,7 @@ class CategoryAdmin(admin.ModelAdmin):
 class ColorAdmin(admin.ModelAdmin):
     list_display = ['id', 'name', 'display_color']
     search_fields = ['name', 'code']
+    list_per_page = 10
 
     @admin.display(description='#Colors')
     def display_color(self, color):
@@ -78,6 +88,7 @@ class ColorAdmin(admin.ModelAdmin):
 class DiscountAdmin(admin.ModelAdmin):
     list_display = ['discount', 'description']
     search_fields = ['discount']
+    list_per_page = 10
 
 
 class VarietyInline(GenericTabularInline):
@@ -146,9 +157,9 @@ class MobileAdmin(admin.ModelAdmin):
     list_filter = [InventoryFilter, 'datetime_created', 'available']
     search_fields = ['name', 'category__title']
     autocomplete_fields = ['category', 'discount']
-    show_facets = admin.ShowFacets.NEVER
     inlines = [VarietyInline, ImageInline,]
     actions = ['make_unavailable', 'make_available']
+    show_facets = admin.ShowFacets.NEVER
     prepopulated_fields = {
         'slug': ['name', ]
     }
