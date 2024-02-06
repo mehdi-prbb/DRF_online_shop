@@ -13,11 +13,13 @@ from django.db import IntegrityError
 from .models import (
                     Category, Customer, Discount,
                     Mobile, Comment, Variety, Color,
-                    Image, Order, OrderItem
+                    Image, Order, OrderItem, Cart, CartItem
                     )
 
 admin.site.register(Order)
 admin.site.register(OrderItem)
+admin.site.register(Cart)
+admin.site.register(CartItem)
 
 @admin.register(Comment)
 class CommentAdmmin(admin.ModelAdmin):

@@ -1,4 +1,5 @@
 from collections.abc import Iterable
+from uuid import uuid4
 from django.conf import settings
 from django.db import models
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
@@ -194,7 +195,18 @@ class OrderItem(models.Model):
     quantity = models.PositiveSmallIntegerField()
     unit_peice = models.IntegerField()
 
-    
+
+class Cart(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid4)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+class CartItem(models.Model):
+    cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name='items')
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.PositiveIntegerField()
+    content_object = GenericForeignKey('content_type', 'object_id')
+    quantity = models.PositiveSmallIntegerField()
     
 
     
