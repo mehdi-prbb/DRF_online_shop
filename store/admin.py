@@ -6,9 +6,7 @@ from django.utils.html import format_html
 from django.db.models import Sum, Prefetch
 from django.db import models
 from django import forms
-from django.db import IntegrityError
 
-# from .forms import ColorValidation
 
 from .models import (
                     Category, Customer, Discount,
@@ -18,12 +16,10 @@ from .models import (
 
 admin.site.register(Order)
 admin.site.register(OrderItem)
-admin.site.register(Cart)
-admin.site.register(CartItem)
 
 @admin.register(Comment)
 class CommentAdmmin(admin.ModelAdmin):
-    list_display = ['id', 'short_title', 'owner', 'status', 'datetime_created']
+    list_display = ['id', 'product_name', 'category', 'short_title', 'owner', 'status', 'datetime_created']
     readonly_fields = ['owner', 'title', 'body']
     list_editable = ['status']
     exclude = ['content_type', 'object_id']
@@ -33,12 +29,15 @@ class CommentAdmmin(admin.ModelAdmin):
     @admin.display(ordering='title', description='title')
     def short_title(self, comment):
         return comment.title[:50]
+    
+    @admin.display(description='product')
+    def product_name(self, comment):
+        return comment.content_object.name
+    
+    @admin.display(description='category')
+    def category(self, comment):
+        return comment.content_type.name
 
-    def get_model_perms(self, request):
-        """
-        Hide comments from list of store app
-        """
-        return {}
 
     def has_add_permission(self, request, obj=None):
         """
@@ -94,22 +93,10 @@ class DiscountAdmin(admin.ModelAdmin):
 
 
 class VarietyInline(GenericTabularInline):
-    # form = ColorValidation
     model = Variety
     fields = ['color', 'inventory', 'unit_price']
     extra = 0
     min_num = 1
-
-    def save_model(self, request, obj, form, change):
-        try:
-            obj.save()
-        except IntegrityError as e:
-            if 'unique constraint' in str(e):
-                form.add_error('color', 'This color already exists for the product.')
-            else:
-                raise
-
-    # TODO improve color querysets
 
 
 class ImageInline(GenericTabularInline):
@@ -267,3 +254,67 @@ class CustomerAdmin(admin.ModelAdmin):
     @admin.display(ordering='user__email')
     def email(self, customer):
         return customer.user.email
+
+
+
+class CartItemInline(admin.TabularInline):
+    """
+    Display items in cart.
+    """
+    model = CartItem
+    fields = [
+        'product_type', 'product_name', 'product_color',
+        'product_unit_price', 'quantity', 'items_total_price'
+        ]
+    readonly_fields = [
+        'product_type', 'product_name',
+        'product_color', 'product_unit_price',
+        'quantity', 'items_total_price'
+        ]
+    max_num = 0
+
+    def get_queryset(self, request):
+        return CartItem.objects.prefetch_related(
+                        'content_object', 'content_type',
+                        Prefetch(
+                            'variety',
+                            queryset=Variety.objects.select_related('color')
+                            )
+                            )
+
+    def product_type(self, item):
+        return f'{item.content_type.name}'
+    product_type.short_description = 'Product type'
+
+    def product_name(self, item):
+        return f'{item.content_object.name}'
+    product_name.short_description = 'Product name'
+
+    def product_color(self, item):
+        return f'{item.variety.color}'
+    product_color.short_description = 'Product color'
+
+    def product_unit_price(self, item):
+        return f'{item.variety.unit_price}'
+    product_unit_price.short_description = 'Product unit price'
+
+    def items_total_price(self, item):
+        return item.quantity * item.variety.unit_price
+    items_total_price.short_description = 'Items total price'
+
+@admin.register(Cart)
+class CartAdmin(admin.ModelAdmin):
+    """
+    Display cart in admin panel.
+    """
+    list_display = ['id', 'created_at']
+    fields = ['cart_total_price']
+    readonly_fields = ['cart_total_price']
+    inlines = [CartItemInline]
+
+    def cart_total_price(self, cart):
+        """
+        Calcute cart items total price.
+        """
+        return sum([item.quantity * item.variety.unit_price for item in cart.items.all()])
+

@@ -7,9 +7,13 @@ router = routers.SimpleRouter()
 
 router.register('categories', views.CategoryViewSet, basename='category')
 router.register('landing-mobiles', views.MobileViewSet, basename='mobile-list')
+router.register('carts', views.CartViewSet, basename='carts')
 
 product_router = routers.NestedDefaultRouter(router, 'landing-mobiles', lookup='mobile')
 product_router.register('comments', views.CommentsViewSet, basename='comments')
+
+cart_items_router = routers.NestedDefaultRouter(router, 'carts', lookup='cart')
+cart_items_router.register('items', views.CartItemViewset, basename='cart-items')
 
 
 urlpatterns = [
@@ -17,4 +21,4 @@ urlpatterns = [
 ]
 
 
-urlpatterns += router.urls + product_router.urls
+urlpatterns += router.urls + product_router.urls + cart_items_router.urls

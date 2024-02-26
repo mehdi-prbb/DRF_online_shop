@@ -1,16 +1,18 @@
+
+from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers
+from .models import Cart, CartItem, Category, Color, Mobile, Comment, Image, Variety
 
-from .models import Category, Color, Mobile, Comment, Image, Variety
 
-
-class MobileColorSerializer(serializers.ModelSerializer):
+class ColorSerializer(serializers.ModelSerializer):
     class Meta:
         model = Color
         fields = ['name', 'code']
 
 
 class VaritySerializer(serializers.ModelSerializer):
-    color = MobileColorSerializer()
+    color = ColorSerializer()
 
     class Meta:
         model = Variety
@@ -100,3 +102,132 @@ class SubCategorySerializer(serializers.ModelSerializer):
         fields = ['categories']
 
 
+class UpdateCartItemserializer(serializers.ModelSerializer):
+    class Meta:
+        model = CartItem
+        fields = ['quantity']
+
+    def validate(self, data):
+        cart_id = self.context['cart_pk']
+        object_id = self.instance.object_id  # Fetch the existing object_id
+        content_type = self.instance.content_type
+
+        # Your existing code for quantity validation
+
+        # Ensure that the existing quantity is considered when validating
+        inventory_data = content_type.get_object_for_this_type(id=object_id).varieties.values('inventory').first()
+        inventory = inventory_data['inventory']
+
+        
+        if data['quantity'] > inventory:
+            raise serializers.ValidationError('Quantity exceeds available inventory.')
+
+        return data
+
+
+class CartItemVaritySerializer(serializers.ModelSerializer):
+    color = ColorSerializer()
+
+    class Meta:
+        model = Variety
+        fields = ['unit_price', 'color']
+
+
+class AddCartItemSerialize(serializers.ModelSerializer):
+    variety_id = serializers.IntegerField(write_only=True, required=True)
+
+    class Meta:
+        model = CartItem
+        fields = ['id', 'content_type', 'object_id', 'quantity', 'variety_id']
+
+    ALLOWED_MODELS = ['mobile']
+        
+
+    def validate(self, data):
+        cart_id = self.context['cart_pk']
+        object_id = data.get('object_id')
+        content_type = data.get('content_type')
+        variety_id = data.get('variety_id')
+
+        model_name = content_type.model
+        if model_name not in self.ALLOWED_MODELS:
+            raise serializers.ValidationError('Invalid content type.')
+
+        try:
+            product_instance = content_type.get_object_for_this_type(id=object_id)
+            valid_varieties = product_instance.varieties.values_list('id', flat=True)
+            if variety_id not in valid_varieties:
+                raise serializers.ValidationError('Invalid variety for the product.')
+            
+            variety_instance = Variety.objects.get(id=variety_id)
+
+            variety_inventory = variety_instance.inventory
+
+            existing_quantity_variety = CartItem.objects.filter(
+                object_id = object_id,
+                cart_id=cart_id,
+                variety_id=variety_id
+            ).values_list('quantity', flat=True).first()
+            
+            if existing_quantity_variety is not None:
+                if existing_quantity_variety + data['quantity'] > variety_inventory:
+                    raise serializers.ValidationError('Quantity exceeds available inventory,')
+            elif data['quantity'] > variety_inventory:
+                raise serializers.ValidationError('Quantity exceeds available inventory,')
+            
+        except ObjectDoesNotExist:
+            raise serializers.ValidationError('Product not found.')
+        
+        return data
+
+    def create(self, validated_data):
+        cart_id = self.context['cart_pk']
+
+        object_id = validated_data.get('object_id')
+        content_type = validated_data.get('content_type')
+        quantity = validated_data.get('quantity')
+        variety_id = validated_data.get('variety_id')
+
+        try:
+            cart_item = CartItem.objects.get(
+                                    cart_id=cart_id, object_id=object_id,
+                                    content_type=content_type, variety_id=variety_id
+                                )
+            cart_item.quantity += quantity
+            cart_item.save()
+        except CartItem.DoesNotExist:
+            cart_item = CartItem.objects.create(cart_id=cart_id, **validated_data)
+
+        self.instance = cart_item
+        return cart_item
+
+
+
+
+class CartItemSerializer(serializers.ModelSerializer):
+    name = serializers.SerializerMethodField()
+    variety = CartItemVaritySerializer()
+    item_total_price = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CartItem
+        fields = ['id', 'quantity', 'name', 'variety', 'item_total_price']
+
+    def get_name(self, item):
+        return item.name(item)
+    
+    def get_item_total_price(self, item):
+        return item.quantity * item.variety.unit_price
+
+
+class CartSerializer(serializers.ModelSerializer):
+    items = CartItemSerializer(many=True, read_only=True)
+    cart_total_price = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Cart
+        fields = ['id', 'items', 'cart_total_price']
+        read_only_fields = ['id']
+    
+    def get_cart_total_price(self, cart):
+        return sum([item.quantity * item.variety.unit_price for item in cart.items.all()])

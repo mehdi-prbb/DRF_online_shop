@@ -84,7 +84,7 @@ class Comment(models.Model):
                               default=COMMENT_STATUS_WAITING)
 
     def __str__(self):
-        return self.owner.phone_number
+        return self.content_object.name
     
 
 class Color(models.Model):
@@ -108,22 +108,11 @@ class Variety(models.Model):
                                             default=1,
                                             validators=[MinValueValidator(1)]
                                             )
-    def clean(self):
-        color = self.color.id
-        existing_color = Variety.objects.filter(object_id=self.object_id).values()
-
-        print(color)
-        print(existing_color)
-
-        for items in existing_color:
-
-            print(items['color_id'])
-        
-            if color == items['color_id']:
-                raise ValidationError({'color':'This color already exists.'})
     
     def __str__(self):
-        return ''
+        return f'{self.color.name} {self.content_object.name}-"id"({self.id})'
+    
+
 
 
 class Image(models.Model):
@@ -193,22 +182,39 @@ class OrderItem(models.Model):
     object_id = models.PositiveIntegerField()
     content_object = GenericForeignKey('content_type', 'object_id')
     quantity = models.PositiveSmallIntegerField()
-    unit_peice = models.IntegerField()
+    unit_price = models.IntegerField()
 
 
 class Cart(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid4)
     created_at = models.DateTimeField(auto_now_add=True)
+    cartitems = GenericRelation('CartItem')
 
+    def __str__(self):
+        return f'Cart ID : {self.id}'
+    
+    
 
 class CartItem(models.Model):
     cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name='items')
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
     object_id = models.PositiveIntegerField()
     content_object = GenericForeignKey('content_type', 'object_id')
-    quantity = models.PositiveSmallIntegerField()
-    
+    quantity = models.PositiveSmallIntegerField(validators=[MinValueValidator(1)])
+    variety = models.ForeignKey(Variety, on_delete=models.CASCADE, related_name='item_vars')
+
+
+    class Meta:
+        unique_together = [['cart', 'object_id', 'content_type', 'variety']]
 
     
+    def name(self, item):
+        name = item.content_object.name
+        return name
+    
+    def __str__(self):
+        return ''
+    
+
     
     

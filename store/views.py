@@ -1,16 +1,18 @@
 from django.db.models import Prefetch
+from django.contrib.contenttypes.prefetch import GenericPrefetch
+from django.contrib.contenttypes.models import ContentType
 from django.shortcuts import get_object_or_404
 
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.generics import ListAPIView
 from rest_framework.viewsets import ReadOnlyModelViewSet, GenericViewSet, ModelViewSet
-from rest_framework.mixins import ListModelMixin, RetrieveModelMixin, DestroyModelMixin, CreateModelMixin
+from rest_framework.mixins import ListModelMixin, RetrieveModelMixin, DestroyModelMixin, CreateModelMixin, UpdateModelMixin
 from rest_framework.permissions import IsAuthenticated, AllowAny, IsAuthenticatedOrReadOnly
 
 from .permissions import IsOwnerOrReadonly
 from .filters import MobileFilter
-from .serializers import CategoriesSerializer, CommentsSerializer, MobileSerializer, SubCategorySerializer
-from .models import Category, Comment, Mobile, Variety
+from .serializers import AddCartItemSerialize, CartItemSerializer, CartSerializer, CategoriesSerializer, CommentsSerializer, MobileSerializer, SubCategorySerializer, UpdateCartItemserializer
+from .models import Cart, CartItem, Category, Color, Comment, Mobile, Variety
 
 
 class CategoryViewSet(ReadOnlyModelViewSet):
@@ -95,3 +97,42 @@ class CommentsViewSet(CreateModelMixin,
             'user': self.request.user
             }
     
+
+class CartItemViewset(ModelViewSet):
+    http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']
+    
+    def get_queryset(self):
+        cart_pk = self.kwargs['cart_pk']
+        return CartItem.objects.filter(cart_id=cart_pk).\
+            prefetch_related('content_object',
+                            Prefetch(
+                                'variety',
+                                queryset=Variety.objects.select_related('color')
+                            )
+                            )
+    
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            return AddCartItemSerialize
+        elif self.request.method == 'PATCH':
+            return UpdateCartItemserializer
+        return CartItemSerializer
+    
+    def get_serializer_context(self):
+        return {'cart_pk': self.kwargs['cart_pk']}
+    
+
+
+class CartViewSet(CreateModelMixin,
+                RetrieveModelMixin,
+                DestroyModelMixin,
+                GenericViewSet
+                ):
+    serializer_class = CartSerializer
+    lookup_value_regex = '[0-9a-fA-F]{8}\-?[0-9a-fA-F]{4}\-?[0-9a-fA-F]{4}\-?[0-9a-fA-F]{4}\-?[0-9a-fA-F]{12}'
+
+    def get_queryset(self):
+        return Cart.objects.prefetch_related(
+            'items__variety__color',
+            'items__content_object'
+            )
