@@ -1,4 +1,6 @@
+from typing import Any
 from django.contrib import admin
+from django.http import HttpRequest
 from django.urls import reverse
 from django.utils.http import urlencode
 from django.contrib.contenttypes.admin import GenericTabularInline
@@ -14,8 +16,8 @@ from .models import (
                     Image, Order, OrderItem, Cart, CartItem
                     )
 
-admin.site.register(Order)
-admin.site.register(OrderItem)
+# admin.site.register(Order)
+# admin.site.register(OrderItem)
 
 @admin.register(Comment)
 class CommentAdmmin(admin.ModelAdmin):
@@ -317,4 +319,74 @@ class CartAdmin(admin.ModelAdmin):
         Calcute cart items total price.
         """
         return sum([item.quantity * item.variety.unit_price for item in cart.items.all()])
+
+
+class OrderItemInline(admin.TabularInline):
+    model = OrderItem
+    fields = [
+        'product_type', 'product_name', 'product_color',
+        'product_unit_price',
+         'quantity',
+         'items_total_price'
+        ]
+    readonly_fields = [
+        'product_type', 'product_name',
+        'product_color',
+          'product_unit_price',
+        'quantity',
+         'items_total_price'
+        ]
+    max_num = 0
+
+    def get_queryset(self, request):
+        return OrderItem.objects.prefetch_related(
+                            'content_type',
+                            'content_object',
+                            'variety__color'
+                            )
+
+
+    def product_type(self, item):
+        return f'{item.content_type.name}'
+    product_type.short_description = 'Product type'
+
+    def product_name(self, item):
+        return f'{item.content_object.name}'
+    product_name.short_description = 'Product name'
+
+    def product_color(self, item):
+        return f'{item.variety.color}'
+    product_color.short_description = 'Product color'
+
+    def product_unit_price(self, item):
+        return f'{item.variety.unit_price}'
+    product_unit_price.short_description = 'Product unit price'
+
+    def items_total_price(self, item):
+        return item.quantity * item.variety.unit_price
+    items_total_price.short_description = 'Items total price'
+
+
+@admin.register(Order)
+class OrderAdmin(admin.ModelAdmin):
+    list_display = ['id', 'customer', 'status', 'datetime_created']
+    list_display_links = ['id', 'customer']
+    fields = ['status', 'order_total_price']
+    readonly_fields = ['order_total_price']
+    list_per_page = 10
+    list_editable = ['status']
+    ordering = ['-datetime_created']
+    search_fields = ['order', ]
+    inlines = [OrderItemInline]
+
+    def get_queryset(self, request):
+        return Order.objects.select_related('customer__user').prefetch_related('items__variety')
+
+    
+    def order_total_price(self, order):
+        """
+        Calcute order items total price.
+        """
+        return sum([item.quantity * item.variety.unit_price for item in order.items.all()])
+
 

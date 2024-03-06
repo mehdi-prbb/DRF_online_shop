@@ -172,6 +172,7 @@ class Order(models.Model):
     datetime_created = models.DateTimeField(auto_now_add=True)
     status = models.CharField(max_length=1, choices=ORDER_STATUS, default=ORDER_STATUS_UNPAID)
 
+
     def __str__(self):
         return self.customer.user.phone_number
 
@@ -182,7 +183,10 @@ class OrderItem(models.Model):
     object_id = models.PositiveIntegerField()
     content_object = GenericForeignKey('content_type', 'object_id')
     quantity = models.PositiveSmallIntegerField()
-    unit_price = models.IntegerField()
+    variety = models.ForeignKey(Variety, on_delete=models.CASCADE, related_name='order_item_vars')
+
+    def __str__(self):
+        return f'{self.id}'
 
 
 class Cart(models.Model):
@@ -208,12 +212,8 @@ class CartItem(models.Model):
         unique_together = [['cart', 'object_id', 'content_type', 'variety']]
 
     
-    def name(self, item):
-        name = item.content_object.name
-        return name
-    
     def __str__(self):
-        return ''
+        return f'{self.id}'
     
 
     

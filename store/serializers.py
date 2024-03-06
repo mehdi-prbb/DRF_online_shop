@@ -1,8 +1,7 @@
-
-from django.contrib.contenttypes.models import ContentType
+from django.db import transaction
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers
-from .models import Cart, CartItem, Category, Color, Mobile, Comment, Image, Variety
+from .models import Cart, CartItem, Category, Color, Customer, Mobile, Comment, Image, Order, OrderItem, Variety
 
 
 class ColorSerializer(serializers.ModelSerializer):
@@ -19,7 +18,7 @@ class VaritySerializer(serializers.ModelSerializer):
         fields = ['unit_price', 'inventory', 'color']
 
 
-class Serializer(serializers.ModelSerializer):
+class ImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = Image
         fields = ['image']
@@ -27,7 +26,7 @@ class Serializer(serializers.ModelSerializer):
 
 class MobileSerializer(serializers.ModelSerializer):
     varieties = VaritySerializer(many=True)
-    images = Serializer(many=True)
+    images = ImageSerializer(many=True)
 
     class Meta:
         model = Mobile
@@ -205,16 +204,13 @@ class AddCartItemSerialize(serializers.ModelSerializer):
 
 
 class CartItemSerializer(serializers.ModelSerializer):
-    name = serializers.SerializerMethodField()
+    name = serializers.CharField(source='content_object.name')
     variety = CartItemVaritySerializer()
     item_total_price = serializers.SerializerMethodField()
 
     class Meta:
         model = CartItem
         fields = ['id', 'quantity', 'name', 'variety', 'item_total_price']
-
-    def get_name(self, item):
-        return item.name(item)
     
     def get_item_total_price(self, item):
         return item.quantity * item.variety.unit_price
@@ -231,3 +227,86 @@ class CartSerializer(serializers.ModelSerializer):
     
     def get_cart_total_price(self, cart):
         return sum([item.quantity * item.variety.unit_price for item in cart.items.all()])
+    
+
+class OrderItemVaritySerializer(serializers.ModelSerializer):
+    color = ColorSerializer()
+
+    class Meta:
+        model = Variety
+        fields = ['unit_price', 'color']
+
+
+class OrderItemSerializer(serializers.ModelSerializer):
+    name = serializers.CharField(source='content_object.name')
+    variety = OrderItemVaritySerializer()
+
+    class Meta:
+        model = OrderItem
+        fields = ['id', 'name', 'quantity', 'variety',]
+
+
+class OrderCustomerSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(max_length=255, source='user.username')
+    phone_number = serializers.CharField(max_length=11, source='user.phone_number')
+
+    class Meta:
+        model = Customer
+        fields = ['id', 'username','phone_number']
+
+ 
+class OrderSerializer(serializers.ModelSerializer):
+    items = OrderItemSerializer(many=True, read_only=True)
+    customer = OrderCustomerSerializer(read_only=True)
+
+    class Meta:
+        model = Order
+        fields = ['id', 'customer', 'status', 'datetime_created', 'items']
+
+
+class OrderCreateSerializer(serializers.Serializer):
+    cart_id = serializers.UUIDField(write_only=True)
+
+        
+    def validate_cart_id(self, cart_id):
+        if not Cart.objects.filter(id=cart_id).exists():
+            raise serializers.ValidationError('Ther is no cart with this cat id.')
+
+        if CartItem.objects.filter(cart_id=cart_id).count() == 0:
+            raise serializers.ValidationError('Cart is empty.')
+        
+        return cart_id
+
+    def save(self, **kwargs):
+        with transaction.atomic():
+            cart_id = self.validated_data['cart_id']
+            user_id = self.context['user_id']
+            customer = Customer.objects.select_related('user').get(user_id=user_id)
+
+            order = Order()
+            order.customer = customer
+            order.save()
+
+            cart_items = CartItem.objects.select_related('content_type', 'variety__color').filter(cart_id=cart_id)
+
+            order_items = [
+                OrderItem(
+                    order=order,
+                    content_type=cart_item.content_type,
+                    object_id=cart_item.object_id,
+                    quantity=cart_item.quantity,
+                    variety=cart_item.variety
+                ) for cart_item in cart_items
+            ]
+
+
+            OrderItem.objects.bulk_create(order_items)
+
+            order = Order.objects.prefetch_related(
+                'items__content_object',
+                'items__variety__color'
+                ).select_related('customer__user').get(pk=order.pk)
+
+            Cart.objects.get(id=cart_id).delete()
+
+            return order

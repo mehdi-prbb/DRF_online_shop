@@ -1,8 +1,9 @@
 from django.db.models import Prefetch
-from django.contrib.contenttypes.prefetch import GenericPrefetch
-from django.contrib.contenttypes.models import ContentType
 from django.shortcuts import get_object_or_404
+from django.contrib.contenttypes.models import ContentType
+from django.contrib.contenttypes.prefetch import GenericPrefetch
 
+from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.generics import ListAPIView
 from rest_framework.viewsets import ReadOnlyModelViewSet, GenericViewSet, ModelViewSet
@@ -11,8 +12,8 @@ from rest_framework.permissions import IsAuthenticated, AllowAny, IsAuthenticate
 
 from .permissions import IsOwnerOrReadonly
 from .filters import MobileFilter
-from .serializers import AddCartItemSerialize, CartItemSerializer, CartSerializer, CategoriesSerializer, CommentsSerializer, MobileSerializer, SubCategorySerializer, UpdateCartItemserializer
-from .models import Cart, CartItem, Category, Color, Comment, Mobile, Variety
+from .serializers import AddCartItemSerialize, CartItemSerializer, CartSerializer, CategoriesSerializer, CommentsSerializer, MobileSerializer, OrderCreateSerializer, OrderSerializer, SubCategorySerializer, UpdateCartItemserializer
+from .models import Cart, CartItem, Category, Color, Comment, Mobile, Order, OrderItem, Variety
 
 
 class CategoryViewSet(ReadOnlyModelViewSet):
@@ -136,3 +137,35 @@ class CartViewSet(CreateModelMixin,
             'items__variety__color',
             'items__content_object'
             )
+    
+
+class OrderViewSet(ModelViewSet):
+    http_method_names = ['get', 'post', 'head', 'options']
+
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        return Order.objects.prefetch_related(
+            'items__variety__color',
+            'items__content_object'
+        ).select_related('customer__user').all()
+    
+
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            return OrderCreateSerializer
+        return OrderSerializer
+    
+    def get_serializer_context(self):
+        return {'user_id': self.request.user.id}
+    
+    def create(self, request, *args, **kwargs):
+        create_order_serializer = OrderCreateSerializer(
+            data=request.data,
+            context={'user_id': self.request.user.id}
+            )
+        create_order_serializer.is_valid(raise_exception=True)
+        created_order = create_order_serializer.save()
+
+        serializer = OrderSerializer(created_order)
+        return Response(serializer.data)

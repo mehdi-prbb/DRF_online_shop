@@ -8,6 +8,7 @@ router = routers.SimpleRouter()
 router.register('categories', views.CategoryViewSet, basename='category')
 router.register('landing-mobiles', views.MobileViewSet, basename='mobile-list')
 router.register('carts', views.CartViewSet, basename='carts')
+router.register('orders', views.OrderViewSet, basename='orders')
 
 product_router = routers.NestedDefaultRouter(router, 'landing-mobiles', lookup='mobile')
 product_router.register('comments', views.CommentsViewSet, basename='comments')
