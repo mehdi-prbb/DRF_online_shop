@@ -1,6 +1,4 @@
-from typing import Any
 from django.contrib import admin
-from django.http import HttpRequest
 from django.urls import reverse
 from django.utils.http import urlencode
 from django.contrib.contenttypes.admin import GenericTabularInline
@@ -12,16 +10,18 @@ from django import forms
 
 from .models import (
                     Category, Customer, Discount,
-                    Mobile, Comment, Variety, Color,
+                    Mobile, Comment, Variety,
                     Image, Order, OrderItem, Cart, CartItem
                     )
 
-# admin.site.register(Order)
-# admin.site.register(OrderItem)
 
 @admin.register(Comment)
 class CommentAdmmin(admin.ModelAdmin):
-    list_display = ['id', 'product_name', 'category', 'short_title', 'owner', 'status', 'datetime_created']
+    list_display = [
+                    'id', 'product_name', 'category',
+                    'short_title', 'owner', 'status',
+                    'datetime_created'
+                    ]
     readonly_fields = ['owner', 'title', 'body']
     list_editable = ['status']
     exclude = ['content_type', 'object_id']
@@ -64,29 +64,6 @@ class CategoryAdmin(admin.ModelAdmin):
         return category.sub_category
 
 
-@admin.register(Color)
-class ColorAdmin(admin.ModelAdmin):
-    list_display = ['id', 'name', 'display_color']
-    search_fields = ['name', 'code']
-    list_per_page = 10
-
-    @admin.display(description='#Colors')
-    def display_color(self, color):
-        """
-        Display colored circles with html format
-        opposite of each color name.
-        """
-        colored_circles = format_html(
-                            f'<div style="display: flex; align-items: center;">'
-                            f'<div style="margin-top: 2px; width: 20px; height:'
-                            f'20px;border-radius: 50%; background-color: {color.code};'
-                            f'border: 2px solid #B9B9B9; margin-right:5px; display:'
-                            f'inline-block; text-align: center; line-height: 20px;"></div>'
-                            ) 
-
-        return format_html(colored_circles)
-
-
 @admin.register(Discount)
 class DiscountAdmin(admin.ModelAdmin):
     list_display = ['discount', 'description']
@@ -96,10 +73,9 @@ class DiscountAdmin(admin.ModelAdmin):
 
 class VarietyInline(GenericTabularInline):
     model = Variety
-    fields = ['color', 'inventory', 'unit_price']
     extra = 0
     min_num = 1
-
+    
 
 class ImageInline(GenericTabularInline):
     model = Image
@@ -162,10 +138,7 @@ class MobileAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         return Mobile.objects.select_related('category__sub_category') \
         .prefetch_related(
-            Prefetch(
-                'varieties',
-                queryset=Variety.objects.select_related('color')
-                )
+            'varieties',
         ).annotate(
             total_inventory=Sum('varieties__inventory'),
                     )
@@ -191,7 +164,7 @@ class MobileAdmin(admin.ModelAdmin):
             format_html(
                 f'<div style="display: flex; align-items: center;">'
                 f'<div style="margin-top: 2px; width: 20px; height:'
-                f'20px; border-radius: 50%; background-color: {variety.color};'
+                f'20px; border-radius: 50%; background-color: {variety.color_code};'
                 f'border: 2px solid #B9B9B9; margin-right:5px; display:'
                 f'inline-block; text-align: center; line-height: 20px;"></div>'
                 f'(Inventory: {variety.inventory}) (Price: ${variety.unit_price})</div>'
@@ -234,9 +207,15 @@ class MobileAdmin(admin.ModelAdmin):
 
 @admin.register(Customer)
 class CustomerAdmin(admin.ModelAdmin):
-    list_display = ['phone_number', 'first_name', 'last_name', 'email']
+    list_display = [
+                'phone_number', 'first_name',
+                'last_name', 'email'
+                ]
     list_per_page = 10
-    search_fields = ['user__phone_number', 'user__first_name', 'user__last_name', 'user__email']
+    search_fields = [
+                'user__phone_number', 'user__first_name',
+                'user__last_name', 'user__email'
+                ]
 
     def get_queryset(self, request):
         return Customer.objects.select_related('user')
@@ -276,13 +255,7 @@ class CartItemInline(admin.TabularInline):
     max_num = 0
 
     def get_queryset(self, request):
-        return CartItem.objects.prefetch_related(
-                        'content_object', 'content_type',
-                        Prefetch(
-                            'variety',
-                            queryset=Variety.objects.select_related('color')
-                            )
-                            )
+        return CartItem.objects.prefetch_related('content_object', 'content_type', 'variety')
 
     def product_type(self, item):
         return f'{item.content_type.name}'
@@ -293,7 +266,7 @@ class CartItemInline(admin.TabularInline):
     product_name.short_description = 'Product name'
 
     def product_color(self, item):
-        return f'{item.variety.color}'
+        return f'{item.variety.color_name}'
     product_color.short_description = 'Product color'
 
     def product_unit_price(self, item):
@@ -342,7 +315,7 @@ class OrderItemInline(admin.TabularInline):
         return OrderItem.objects.prefetch_related(
                             'content_type',
                             'content_object',
-                            'variety__color'
+                            'variety'
                             )
 
 
@@ -355,7 +328,7 @@ class OrderItemInline(admin.TabularInline):
     product_name.short_description = 'Product name'
 
     def product_color(self, item):
-        return f'{item.variety.color}'
+        return f'{item.variety.color_name}'
     product_color.short_description = 'Product color'
 
     def product_unit_price(self, item):
@@ -369,14 +342,14 @@ class OrderItemInline(admin.TabularInline):
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ['id', 'customer', 'status', 'datetime_created']
-    list_display_links = ['id', 'customer']
+    list_display = ['order_code', 'customer', 'status', 'datetime_created']
+    list_display_links = ['order_code', 'customer']
     fields = ['status', 'order_total_price']
     readonly_fields = ['order_total_price']
     list_per_page = 10
     list_editable = ['status']
     ordering = ['-datetime_created']
-    search_fields = ['order', ]
+    search_fields = ['order_code', 'status', 'datetime_created']
     inlines = [OrderItemInline]
 
     def get_queryset(self, request):

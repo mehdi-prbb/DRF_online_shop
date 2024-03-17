@@ -1,11 +1,9 @@
-from collections.abc import Iterable
 from uuid import uuid4
 from django.conf import settings
 from django.db import models
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
-from django.core.validators import MinValueValidator 
-from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator
 
 from colorfield.fields import ColorField
 
@@ -87,22 +85,12 @@ class Comment(models.Model):
         return self.content_object.name
     
 
-class Color(models.Model):
-    name = models.CharField(max_length=50, unique=True)
-    code = ColorField(default='FF0000', unique=True)
-
-    def __str__(self):
-        return self.name
-    
-
 class Variety(models.Model):
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
     object_id = models.PositiveIntegerField()
     content_object = GenericForeignKey('content_type', 'object_id')
-    color = models.ForeignKey(
-                              Color, on_delete=models.CASCADE,
-                              related_name='colors'
-                              )
+    color_name = models.CharField(max_length=50)
+    color_code = ColorField()                     
     unit_price = models.IntegerField()
     inventory = models.PositiveIntegerField(
                                             default=1,
@@ -110,9 +98,7 @@ class Variety(models.Model):
                                             )
     
     def __str__(self):
-        return f'{self.color.name} {self.content_object.name}-"id"({self.id})'
-    
-
+        return f'{self.color_name} {self.content_object.name}-"id"({self.id})'
 
 
 class Image(models.Model):
@@ -168,6 +154,7 @@ class Order(models.Model):
         (ORDER_STATUS_CANCELED,'Canceled'),
     ]
 
+    order_code = models.UUIDField(primary_key=True, default=uuid4)
     customer = models.ForeignKey(Customer, on_delete=models.PROTECT, related_name='orders')
     datetime_created = models.DateTimeField(auto_now_add=True)
     status = models.CharField(max_length=1, choices=ORDER_STATUS, default=ORDER_STATUS_UNPAID)
@@ -184,6 +171,9 @@ class OrderItem(models.Model):
     content_object = GenericForeignKey('content_type', 'object_id')
     quantity = models.PositiveSmallIntegerField()
     variety = models.ForeignKey(Variety, on_delete=models.CASCADE, related_name='order_item_vars')
+
+    class Meta:
+        unique_together = [['order', 'object_id', 'content_type', 'variety']]
 
     def __str__(self):
         return f'{self.id}'

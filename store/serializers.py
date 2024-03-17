@@ -1,21 +1,14 @@
 from django.db import transaction
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers
-from .models import Cart, CartItem, Category, Color, Customer, Mobile, Comment, Image, Order, OrderItem, Variety
-
-
-class ColorSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Color
-        fields = ['name', 'code']
+from .models import Cart, CartItem, Category, Customer, Mobile, Comment, Image, Order, OrderItem, Variety
 
 
 class VaritySerializer(serializers.ModelSerializer):
-    color = ColorSerializer()
 
     class Meta:
         model = Variety
-        fields = ['unit_price', 'inventory', 'color']
+        fields = ['unit_price', 'inventory', 'color_code', 'color_name']
 
 
 class ImageSerializer(serializers.ModelSerializer):
@@ -125,11 +118,10 @@ class UpdateCartItemserializer(serializers.ModelSerializer):
 
 
 class CartItemVaritySerializer(serializers.ModelSerializer):
-    color = ColorSerializer()
 
     class Meta:
         model = Variety
-        fields = ['unit_price', 'color']
+        fields = ['unit_price', 'color_name', 'color_code']
 
 
 class AddCartItemSerialize(serializers.ModelSerializer):
@@ -230,20 +222,23 @@ class CartSerializer(serializers.ModelSerializer):
     
 
 class OrderItemVaritySerializer(serializers.ModelSerializer):
-    color = ColorSerializer()
 
     class Meta:
         model = Variety
-        fields = ['unit_price', 'color']
+        fields = ['unit_price', 'color_name', 'color_code']
 
 
 class OrderItemSerializer(serializers.ModelSerializer):
     name = serializers.CharField(source='content_object.name')
     variety = OrderItemVaritySerializer()
+    item_total_price = serializers.SerializerMethodField()
 
     class Meta:
         model = OrderItem
-        fields = ['id', 'name', 'quantity', 'variety',]
+        fields = ['name', 'quantity', 'variety', 'item_total_price']
+
+    def get_item_total_price(self, item):
+        return item.quantity * item.variety.unit_price
 
 
 class OrderCustomerSerializer(serializers.ModelSerializer):
@@ -252,16 +247,20 @@ class OrderCustomerSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Customer
-        fields = ['id', 'username','phone_number']
+        fields = ['username','phone_number']
 
  
 class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, read_only=True)
     customer = OrderCustomerSerializer(read_only=True)
+    order_total_price = serializers.SerializerMethodField()
 
     class Meta:
         model = Order
-        fields = ['id', 'customer', 'status', 'datetime_created', 'items']
+        fields = ['order_code', 'customer', 'status', 'datetime_created', 'items', 'order_total_price']
+
+    def get_order_total_price(self, order):
+        return sum([item.quantity * item.variety.unit_price for item in order.items.all()])
 
 
 class OrderCreateSerializer(serializers.Serializer):
@@ -287,7 +286,7 @@ class OrderCreateSerializer(serializers.Serializer):
             order.customer = customer
             order.save()
 
-            cart_items = CartItem.objects.select_related('content_type', 'variety__color').filter(cart_id=cart_id)
+            cart_items = CartItem.objects.select_related('content_type', 'variety').filter(cart_id=cart_id)
 
             order_items = [
                 OrderItem(
@@ -304,7 +303,7 @@ class OrderCreateSerializer(serializers.Serializer):
 
             order = Order.objects.prefetch_related(
                 'items__content_object',
-                'items__variety__color'
+                'items__variety'
                 ).select_related('customer__user').get(pk=order.pk)
 
             Cart.objects.get(id=cart_id).delete()
