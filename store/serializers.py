@@ -17,13 +17,26 @@ class ImageSerializer(serializers.ModelSerializer):
         fields = ['image']
 
 
-class MobileSerializer(serializers.ModelSerializer):
+class MobilesListSerializer(serializers.HyperlinkedModelSerializer):
+    varieties = VaritySerializer(many=True)
+    images = ImageSerializer(many=True)
+    url = serializers.HyperlinkedIdentityField(view_name='mobile-detail', lookup_field='slug')
+
+    class Meta:
+        model = Mobile
+        fields = ['url', 'name', 'description',
+                  'sim_card_number', 'internal_memory',
+                  'ram','images','varieties',
+                  'discount', 'available']
+    
+
+class MobileDetailSerializer(serializers.ModelSerializer):
     varieties = VaritySerializer(many=True)
     images = ImageSerializer(many=True)
 
     class Meta:
         model = Mobile
-        fields = ['id', 'name', 'description', 'slug',
+        fields = ['id', 'name', 'description',
                   'networks', 'memory_card_support',
                   'sim_card_number', 'sim_description',
                   'backs_camera', 'internal_memory',

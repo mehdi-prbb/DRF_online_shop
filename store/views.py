@@ -8,6 +8,8 @@ from rest_framework.viewsets import ReadOnlyModelViewSet, GenericViewSet, ModelV
 from rest_framework.mixins import ListModelMixin, RetrieveModelMixin, DestroyModelMixin, CreateModelMixin, UpdateModelMixin
 from rest_framework.permissions import IsAuthenticated, AllowAny, IsAuthenticatedOrReadOnly
 
+from store.filters import MobileFilterSet
+
 from .permissions import IsOwnerOrReadonly
 from . import serializers
 from .models import Cart, CartItem, Category, Comment, Mobile, Order, OrderItem, Variety
@@ -25,7 +27,6 @@ class CategoryViewSet(ReadOnlyModelViewSet):
         )
     lookup_field = 'slug'
 
-    # 
     def get_serializer_class(self):
         if 'slug' in self.kwargs:
             return serializers.SubCategorySerializer
@@ -35,28 +36,18 @@ class CategoryViewSet(ReadOnlyModelViewSet):
 
 class MobileViewSet(ReadOnlyModelViewSet):
     """
-    Returns the list of all mobiles.
+    Returns the list and details of mobiles and filter them by brands.
     """
-    serializer_class = serializers.MobileSerializer
+    queryset = Mobile.objects.prefetch_related('discount', 'images', 'varieties')
     filter_backends = [DjangoFilterBackend]
+    filterset_class = MobileFilterSet
     lookup_field = 'slug'
 
-    def get_queryset(self):
-        return Mobile.objects.prefetch_related('discount', 'images', 'varieties')
-
-
-class MobilesByBrand(ListAPIView):
-    """
-    Returns the list of mobiles by brands.
-    """
-    serializer_class = serializers.MobileSerializer
-
-    def get_queryset(self):
-        category_slug = self.kwargs['slug']
-        return Mobile.objects.prefetch_related(
-                'discount', 'images', 'varieties'
-                ).filter(category__slug=category_slug)
-        
+    def get_serializer_class(self):
+        if self.action == 'retrieve':
+            return serializers.MobileDetailSerializer
+        return serializers.MobilesListSerializer
+    
 
 class CommentsViewSet(CreateModelMixin,
                   RetrieveModelMixin,
