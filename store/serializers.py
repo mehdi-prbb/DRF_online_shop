@@ -84,11 +84,17 @@ class SecondLevelSubCategorySerializer(serializers.ModelSerializer):
 
 
 class FirstLevelSubCategorySerializer(serializers.ModelSerializer):
-    sub_cat = SecondLevelSubCategorySerializer(many=True)
+    subsets = SecondLevelSubCategorySerializer(many=True, source='sub_cat')
 
     class Meta:
         model = Category
-        fields = ['id', 'title', 'slug', 'sub_cat']
+        fields = ['id', 'title', 'slug', 'subsets']
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if not instance.sub_cat.exists():
+            data.pop('subsets')
+        return data
 
 
 class CategoriesSerializer(serializers.ModelSerializer):
@@ -98,13 +104,11 @@ class CategoriesSerializer(serializers.ModelSerializer):
         model = Category
         fields = ['id', 'title', 'slug', 'subsets']
 
-
-class SubCategorySerializer(serializers.ModelSerializer):
-    categories = SecondLevelSubCategorySerializer(many=True, source='sub_cat')
-
-    class Meta:
-        model = Category
-        fields = ['categories']
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if not instance.sub_cat.exists():
+            data.pop('subsets')
+        return data
 
 
 class UpdateCartItemserializer(serializers.ModelSerializer):

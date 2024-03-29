@@ -15,10 +15,11 @@ from . import serializers
 from .models import Cart, CartItem, Category, Comment, Mobile, Order, OrderItem, Variety
 
 
-class CategoryViewSet(ReadOnlyModelViewSet):
+class CategoryViewSet(ListModelMixin, GenericViewSet):
     """
     A class to list all categories and retrieve their subcategories.
     """
+    serializer_class = serializers.CategoriesSerializer
     queryset = Category.objects.filter(is_sub=False).prefetch_related(
             Prefetch(
                 'sub_cat',
@@ -27,11 +28,11 @@ class CategoryViewSet(ReadOnlyModelViewSet):
         )
     lookup_field = 'slug'
 
-    def get_serializer_class(self):
-        if 'slug' in self.kwargs:
-            return serializers.SubCategorySerializer
-        else:
-            return serializers.CategoriesSerializer
+    # def get_serializer_class(self):
+    #     if 'slug' in self.kwargs:
+    #         return serializers.SubCategorySerializer
+    #     else:
+    #         return serializers.CategoriesSerializer
 
 
 class MobileViewSet(ReadOnlyModelViewSet):
