@@ -20,19 +20,15 @@ class CategoryViewSet(ListModelMixin, GenericViewSet):
     A class to list all categories and retrieve their subcategories.
     """
     serializer_class = serializers.CategoriesSerializer
-    queryset = Category.objects.filter(is_sub=False).prefetch_related(
+    lookup_field = 'slug'
+
+    def get_queryset(self):
+        return Category.objects.filter(is_sub=False).prefetch_related(
             Prefetch(
                 'sub_cat',
                 queryset=Category.objects.prefetch_related('sub_cat')
                 )
         )
-    lookup_field = 'slug'
-
-    # def get_serializer_class(self):
-    #     if 'slug' in self.kwargs:
-    #         return serializers.SubCategorySerializer
-    #     else:
-    #         return serializers.CategoriesSerializer
 
 
 class MobileViewSet(ReadOnlyModelViewSet):
