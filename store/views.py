@@ -37,14 +37,27 @@ class MobileViewSet(ReadOnlyModelViewSet):
     """
     queryset = Mobile.objects.prefetch_related('discount', 'images', 'varieties')
     filter_backends = [DjangoFilterBackend]
-    filterset_class = MobileFilterSet
     lookup_field = 'slug'
+
+    def get_queryset(self):
+        return Mobile.objects.prefetch_related('discount', 'images', 'varieties')
 
     def get_serializer_class(self):
         if self.action == 'retrieve':
             return serializers.MobileDetailSerializer
         return serializers.MobilesListSerializer
-    
+
+
+class MobileByBrandViewSet(ListAPIView):
+    """
+    Returns the list and details of mobiles and filter them by brands.
+    """
+    serializer_class = serializers.MobilesListSerializer
+
+    def get_queryset(self):
+        category = self.kwargs['category__slug']
+        return Mobile.objects.filter(category__slug=category).prefetch_related('discount', 'images', 'varieties')
+
 
 class CommentsViewSet(CreateModelMixin,
                   RetrieveModelMixin,
