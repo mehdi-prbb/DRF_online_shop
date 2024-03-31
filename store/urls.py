@@ -6,11 +6,11 @@ from . import views
 router = routers.SimpleRouter()
 
 router.register('categories', views.CategoryViewSet, basename='category')
-router.register('landing-mobiles', views.MobileViewSet, basename='mobile')
+router.register('category-mobile', views.MobileViewSet, basename='mobile')
 router.register('carts', views.CartViewSet, basename='carts')
 router.register('orders', views.OrderViewSet, basename='orders')
 
-mobile_router = routers.NestedDefaultRouter(router, 'landing-mobiles', lookup='mobile')
+mobile_router = routers.NestedDefaultRouter(router, 'category-mobile', lookup='mobile')
 mobile_router.register('comments', views.CommentsViewSet, basename='comments')
 
 cart_items_router = routers.NestedDefaultRouter(router, 'carts', lookup='cart')
