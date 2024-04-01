@@ -1,7 +1,10 @@
 from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404
+from django.http import Http404
+from django.core.exceptions import ObjectDoesNotExist
 
 from rest_framework.response import Response
+from rest_framework import status
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.generics import ListAPIView
 from rest_framework.viewsets import ReadOnlyModelViewSet, GenericViewSet, ModelViewSet
@@ -55,8 +58,11 @@ class MobileByBrandViewSet(ListAPIView):
     serializer_class = serializers.MobilesListSerializer
 
     def get_queryset(self):
-        category = self.kwargs['category__slug']
-        return Mobile.objects.filter(category__slug=category).prefetch_related('discount', 'images', 'varieties')
+        category = self.kwargs['slug']
+        mobiles = Mobile.objects.prefetch_related('discount', 'images', 'varieties').filter(category__slug=category)
+        if not mobiles.exists():
+            raise Http404()
+        return mobiles
 
 
 class CommentsViewSet(CreateModelMixin,

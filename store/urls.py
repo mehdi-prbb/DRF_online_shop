@@ -17,7 +17,7 @@ cart_items_router = routers.NestedDefaultRouter(router, 'carts', lookup='cart')
 cart_items_router.register('items', views.CartItemViewset, basename='cart-items')
 
 urlpatterns = [
-    path('mobile-brand-<str:category__slug>/', views.MobileByBrandViewSet.as_view(), name='mobile-by-brand')
+    path('mobile-brand-<str:slug>/', views.MobileByBrandViewSet.as_view(), name='mobile-by-brand')
 ]
 
 
