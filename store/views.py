@@ -57,12 +57,17 @@ class MobileByBrandViewSet(ListAPIView):
     """
     serializer_class = serializers.MobilesListSerializer
 
+    def get(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        if not queryset.exists():
+            return Response({'detail':'Mobile brand not found.'}, status=status.HTTP_404_NOT_FOUND) 
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
     def get_queryset(self):
         category = self.kwargs['slug']
-        mobiles = Mobile.objects.prefetch_related('discount', 'images', 'varieties').filter(category__slug=category)
-        if not mobiles.exists():
-            raise Http404()
-        return mobiles
+        return Mobile.objects.prefetch_related('discount', 'images', 'varieties').filter(category__slug=category)
+    
 
 
 class CommentsViewSet(CreateModelMixin,
