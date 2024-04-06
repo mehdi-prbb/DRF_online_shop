@@ -82,16 +82,24 @@ class CommentsViewSet(CreateModelMixin,
     permission_classes = [IsAuthenticatedOrReadOnly]
     ordering = ['-datetime_created']
 
+    def create(self, request, *args, **kwargs):
+        mobile_slug = kwargs.get('mobile_slug')
+        mobile = get_object_or_404(Mobile, slug=mobile_slug)
+        if mobile_slug != mobile.slug:
+            return Response({"error": "Not found."}, status=status.HTTP_400_BAD_REQUEST)
+        return super().create(request, *args, **kwargs)
+    
     def get_queryset(self):
         mobile_slug = self.kwargs['mobile_slug']
         mobile = get_object_or_404(Mobile, slug=mobile_slug)
         return mobile.comments.filter(status='a').\
-            order_by('-datetime_created').select_related('owner', 'content_type')
+            order_by('-datetime_created').select_related('owner','content_type')
 
     def get_permissions(self):
         if self.request.method == 'DELETE':
             return [IsOwnerOrReadonly()]
         return super().get_permissions()
+
 
     def get_serializer_context(self):
         return {

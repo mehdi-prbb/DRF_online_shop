@@ -67,12 +67,7 @@ class CommentsSerializer(serializers.ModelSerializer):
     
     def create(self, validated_data):
         mobile_slug = self.context['mobile_slug']
-
-        try:
-            validated_data['content_object'] = Mobile.objects.get(slug=mobile_slug)
-        except Mobile.DoesNotExist:
-            raise serializers.ValidationError(f"Product with slug {mobile_slug} does not exist.")
-        
+        validated_data['content_object'] = Mobile.objects.get(slug=mobile_slug)
         validated_data['owner'] = self.context['user']
         return Comment.objects.create(**validated_data)
 
