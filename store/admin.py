@@ -1,4 +1,6 @@
+from typing import Any
 from django.contrib import admin
+from django.http import HttpRequest
 from django.urls import reverse
 from django.utils.http import urlencode
 from django.contrib.contenttypes.admin import GenericTabularInline
@@ -26,6 +28,9 @@ class CommentAdmmin(admin.ModelAdmin):
     list_editable = ['status']
     exclude = ['content_type', 'object_id']
     list_per_page = 10
+
+    def get_queryset(self, request):
+        return Comment.objects.prefetch_related('content_object').select_related('content_type', 'owner')
 
 
     @admin.display(ordering='title', description='title')

@@ -84,8 +84,9 @@ class CommentsViewSet(CreateModelMixin,
 
     def create(self, request, *args, **kwargs):
         mobile_slug = kwargs.get('mobile_slug')
-        mobile = get_object_or_404(Mobile, slug=mobile_slug)
-        if mobile_slug != mobile.slug:
+        try:
+            Mobile.objects.get(slug=mobile_slug)
+        except Mobile.DoesNotExist:
             return Response({"error": "Not found."}, status=status.HTTP_400_BAD_REQUEST)
         return super().create(request, *args, **kwargs)
     
