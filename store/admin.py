@@ -80,6 +80,9 @@ class VarietyInline(GenericTabularInline):
     model = Variety
     extra = 0
     min_num = 1
+
+    def get_queryset(self, request):
+        return Variety.objects.prefetch_related('content_object')
     
 
 class ImageInline(GenericTabularInline):
