@@ -41,10 +41,11 @@ class Discount(models.Model):
 
 
 class Product(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid4, unique=True)
     name = models.CharField(max_length=255)
     category = models.ForeignKey(
-                                 Category, on_delete=models.PROTECT,
-                                 related_name='products'
+                                 Category,
+                                 on_delete=models.PROTECT
                                 )
     slug = models.SlugField(max_length=255)
     description = models.TextField()
@@ -73,7 +74,7 @@ class Comment(models.Model):
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
                               related_name='comment_owner')
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
-    object_id = models.PositiveIntegerField()
+    object_id = models.UUIDField(default=uuid4)
     content_object = GenericForeignKey('content_type', 'object_id')
     title = models.CharField(max_length=255)
     body = models.TextField()
@@ -81,13 +82,14 @@ class Comment(models.Model):
     status = models.CharField(max_length=2, choices=COMMENT_STATUS,
                               default=COMMENT_STATUS_WAITING)
 
+
     def __str__(self):
         return self.content_object.name
     
 
 class Variety(models.Model):
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
-    object_id = models.PositiveIntegerField()
+    object_id = models.UUIDField(default=uuid4)
     content_object = GenericForeignKey('content_type', 'object_id')
     color_name = models.CharField(max_length=50)
     color_code = ColorField()                     
@@ -103,7 +105,7 @@ class Variety(models.Model):
 
 class Image(models.Model):
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
-    object_id = models.PositiveIntegerField()
+    object_id = models.UUIDField(default=uuid4)
     content_object = GenericForeignKey('content_type', 'object_id')
     name = models.CharField(max_length=50)
     image = models.ImageField(upload_to='images/')
@@ -131,6 +133,27 @@ class Mobile(Product):
     varieties = GenericRelation(Variety)
     images = GenericRelation(Image)
     
+    def __str__(self):
+        return self.name
+
+
+class Laptop(Product):
+    cpu = models.CharField(max_length=255)
+    ram = models.CharField(max_length=255)
+    internal_memory = models.CharField(max_length=255)
+    gpu = models.CharField(max_length=255)
+    battery_type = models.CharField(max_length=255)
+    weight = models.CharField(max_length=255)
+    screen_size = models.CharField(max_length=255)
+    screen_resolution = models.CharField(max_length=255)
+    dimensions = models.CharField(max_length=255)
+    os_type = models.CharField(max_length=255)
+    connections = models.CharField(max_length=255)
+    accessories = models.CharField(max_length=255)
+    comments = GenericRelation(Comment)
+    varieties = GenericRelation(Variety)
+    images = GenericRelation(Image)
+
     def __str__(self):
         return self.name
     
@@ -167,7 +190,7 @@ class Order(models.Model):
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.PROTECT, related_name='items')
     content_type = models.ForeignKey(ContentType, on_delete=models.PROTECT)
-    object_id = models.PositiveIntegerField()
+    object_id = models.UUIDField(default=uuid4)
     content_object = GenericForeignKey('content_type', 'object_id')
     quantity = models.PositiveSmallIntegerField()
     variety = models.ForeignKey(Variety, on_delete=models.CASCADE, related_name='order_item_vars')
@@ -192,7 +215,7 @@ class Cart(models.Model):
 class CartItem(models.Model):
     cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name='items')
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
-    object_id = models.PositiveIntegerField()
+    object_id = models.UUIDField(default=uuid4)
     content_object = GenericForeignKey('content_type', 'object_id')
     quantity = models.PositiveSmallIntegerField(validators=[MinValueValidator(1)])
     variety = models.ForeignKey(Variety, on_delete=models.CASCADE, related_name='item_vars')

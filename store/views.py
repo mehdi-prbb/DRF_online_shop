@@ -1,7 +1,6 @@
 from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404
-from django.http import Http404
-from django.core.exceptions import ObjectDoesNotExist
+from django.contrib.contenttypes.models import ContentType
 
 from rest_framework.response import Response
 from rest_framework import status
@@ -15,7 +14,7 @@ from store.filters import MobileFilterSet
 
 from .permissions import IsOwnerOrReadonly
 from . import serializers
-from .models import Cart, CartItem, Category, Comment, Mobile, Order, OrderItem, Variety
+from .models import Cart, CartItem, Category, Comment, Laptop, Mobile, Order, OrderItem, Variety
 
 
 class CategoryViewSet(ListModelMixin, GenericViewSet):
@@ -69,12 +68,44 @@ class MobileByBrandViewSet(ListAPIView):
         return Mobile.objects.prefetch_related('discount', 'images', 'varieties').filter(category__slug=category)
     
 
+class LaptopViewSet(ReadOnlyModelViewSet):
+    """
+    Returns the list and details of laptops and filter them by brands.
+    """
+    queryset = Laptop.objects.prefetch_related('discount', 'images', 'varieties')
+    filter_backends = [DjangoFilterBackend]
+    lookup_field = 'slug'
 
-class CommentsViewSet(CreateModelMixin,
-                  RetrieveModelMixin,
-                  ListModelMixin,
-                  DestroyModelMixin,
-                  GenericViewSet):
+    def get_queryset(self):
+        return Laptop.objects.prefetch_related('discount', 'images', 'varieties')
+
+    def get_serializer_class(self):
+        if self.action == 'retrieve':
+            return serializers.LaptopDetailSerializer
+        return serializers.laptopListSerializer
+
+
+class LaptopByBrandViewSet(ListAPIView):
+    """
+    Returns the list and details of laptops and filter them by brands.
+    """
+    serializer_class = serializers.laptopListSerializer
+
+    def get(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        if not queryset.exists():
+            return Response({'detail':'Laptop brand not found.'}, status=status.HTTP_404_NOT_FOUND) 
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
+    def get_queryset(self):
+        category = self.kwargs['slug']
+        return Laptop.objects.prefetch_related('discount', 'images', 'varieties').filter(category__slug=category)
+
+
+class CommentsViewSet(
+    CreateModelMixin, RetrieveModelMixin, ListModelMixin, DestroyModelMixin, GenericViewSet
+):
     """
     A class to leave, list, retrieve and delete comments.
     """
@@ -82,32 +113,39 @@ class CommentsViewSet(CreateModelMixin,
     permission_classes = [IsAuthenticatedOrReadOnly]
     ordering = ['-datetime_created']
 
-    def create(self, request, *args, **kwargs):
-        mobile_slug = kwargs.get('mobile_slug')
-        try:
-            Mobile.objects.get(slug=mobile_slug)
-        except Mobile.DoesNotExist:
-            return Response({"error": "Not found."}, status=status.HTTP_400_BAD_REQUEST)
-        return super().create(request, *args, **kwargs)
-    
     def get_queryset(self):
-        mobile_slug = self.kwargs['mobile_slug']
-        mobile = get_object_or_404(Mobile, slug=mobile_slug)
-        return mobile.comments.filter(status='a').\
-            order_by('-datetime_created').select_related('owner','content_type')
+        model_mapping = {
+            'mobile': Mobile,
+            'laptop': Laptop
+        }
+        model_name = self.request.resolver_match.url_name.split('-')[0]
+        model_class = model_mapping.get(model_name)
+        slug_key = self.kwargs.get(f'{model_name}_slug')
+
+        model_instance = get_object_or_404(model_class, slug=slug_key)
+        self.product = model_instance
+        return model_instance.comments.filter(status='a').order_by(
+            'datetime_created').select_related('owner', 'content_type')
+
+    def create(self, request, *args, **kwargs):
+        if not hasattr(self, 'product'):
+            self.get_queryset()
+
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        serializer.validated_data['content_object'] = self.product
+        serializer.validated_data['owner'] = self.request.user
+        serializer.save()
+
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
 
     def get_permissions(self):
         if self.request.method == 'DELETE':
             return [IsOwnerOrReadonly()]
         return super().get_permissions()
 
-
-    def get_serializer_context(self):
-        return {
-            'mobile_slug': self.kwargs['mobile_slug'],
-            'user': self.request.user
-            }
-    
 
 class CartItemViewset(ModelViewSet):
     http_method_names = ['get', 'post', 'patch', 'delete', 'head', 'options']

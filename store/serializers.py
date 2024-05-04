@@ -1,7 +1,7 @@
 from django.db import transaction
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers
-from .models import Cart, CartItem, Category, Customer, Mobile, Comment, Image, Order, OrderItem, Variety
+from .models import Cart, CartItem, Category, Customer, Laptop, Mobile, Comment, Image, Order, OrderItem, Variety
 
 
 class VaritySerializer(serializers.ModelSerializer):
@@ -45,6 +45,33 @@ class MobileDetailSerializer(serializers.ModelSerializer):
                   'picture_resolution','screen_technology',
                   'accessories', 'images','varieties',
                   'discount', 'available']
+        
+
+class laptopListSerializer(serializers.HyperlinkedModelSerializer):
+    varieties = VaritySerializer(many=True)
+    images = ImageSerializer(many=True)
+    url = serializers.HyperlinkedIdentityField(view_name='laptop-detail', lookup_field='slug')
+
+    class Meta:
+        model = Laptop
+        fields = ['url', 'name', 'description',
+                  'cpu', 'internal_memory',
+                  'ram','images','varieties',
+                  'discount', 'available']
+    
+
+class LaptopDetailSerializer(serializers.ModelSerializer):
+    varieties = VaritySerializer(many=True)
+    images = ImageSerializer(many=True)
+
+    class Meta:
+        model = Laptop
+        fields = ['id', 'name', 'description',
+                  'cpu', 'internal_memory','ram', 
+                  'gpu','battery_type', 'weight', 'screen_size',
+                  'screen_resolution','dimensions', 'os_type', 'connections',
+                  'accessories', 'images','varieties',
+                  'discount', 'available']
 
 
 class CommentsSerializer(serializers.ModelSerializer):
@@ -65,11 +92,11 @@ class CommentsSerializer(serializers.ModelSerializer):
             return f'{obj.owner.username}'
         return 'Anonymous user'
     
-    def create(self, validated_data):
-        mobile_slug = self.context['mobile_slug']
-        validated_data['content_object'] = Mobile.objects.get(slug=mobile_slug)
-        validated_data['owner'] = self.context['user']
-        return Comment.objects.create(**validated_data)
+    # def create(self, validated_data):
+        # product = self.context['product']
+        # validated_data['content_object'] = product
+        # validated_data['owner'] = self.context['user']
+        # return Comment.objects.create(**validated_data)
 
 
 class SecondLevelSubCategorySerializer(serializers.ModelSerializer):
@@ -143,7 +170,7 @@ class AddCartItemSerialize(serializers.ModelSerializer):
         model = CartItem
         fields = ['id', 'content_type', 'object_id', 'quantity', 'variety_id']
 
-    ALLOWED_MODELS = ['mobile']
+    ALLOWED_MODELS = ['mobile', 'laptop']
         
 
     def validate(self, data):

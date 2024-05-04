@@ -1,6 +1,5 @@
-from typing import Any
+from django.contrib.contenttypes.models import ContentType
 from django.contrib import admin
-from django.http import HttpRequest
 from django.urls import reverse
 from django.utils.http import urlencode
 from django.contrib.contenttypes.admin import GenericTabularInline
@@ -9,13 +8,13 @@ from django.db.models import Sum, Prefetch
 from django.db import models
 from django import forms
 
-
 from .models import (
                     Category, Customer, Discount,
-                    Mobile, Comment, Variety,
+                    Mobile, Comment, Variety, Laptop,
                     Image, Order, OrderItem, Cart, CartItem
                     )
 
+# admin.site.register(Laptop)
 
 @admin.register(Comment)
 class CommentAdmmin(admin.ModelAdmin):
@@ -126,8 +125,9 @@ class MobileAdmin(admin.ModelAdmin):
                     'id', 'name', 'category',
                     'mobile_variety','total_inventory',
                     'available', 'datetime_created',
-                    'num_of_comments'
+                    'comments'
                     ]
+    readonly_fields = ['id']
     list_per_page = 10
     list_filter = [InventoryFilter, 'datetime_created', 'available']
     search_fields = ['name', 'category__title']
@@ -152,7 +152,7 @@ class MobileAdmin(admin.ModelAdmin):
                     )
     
     @admin.display(description='# COMMENTS')
-    def num_of_comments(self, obj):
+    def comments(self, obj):
         url = (
             reverse('admin:store_comment_changelist')
             + '?'
@@ -210,6 +210,102 @@ class MobileAdmin(admin.ModelAdmin):
         self.message_user(
             request,
             f'The mobile {" , ".join(mobile_names)} availabled'
+        )
+
+
+@admin.register(Laptop)
+class LaptopAdmin(admin.ModelAdmin):
+    list_display = [
+                    'id', 'name', 'category',
+                    'laptop_variety','total_inventory',
+                    'available', 'datetime_created',
+                    'comments'
+                    ]
+    readonly_fields = ['id']
+    list_per_page = 10
+    list_filter = [InventoryFilter, 'datetime_created', 'available']
+    search_fields = ['name', 'category__title']
+    autocomplete_fields = ['category', 'discount']
+    inlines = [VarietyInline, ImageInline,]
+    actions = ['make_unavailable', 'make_available']
+    show_facets = admin.ShowFacets.NEVER
+    prepopulated_fields = {
+        'slug': ['name', ]
+    }
+
+    formfield_overrides = {
+        models.TextField: {'widget': forms.Textarea(attrs={'rows': 3, 'cols': 30})},
+    }
+
+    def get_queryset(self, request):
+        return Laptop.objects.select_related('category__sub_category') \
+        .prefetch_related(
+            'varieties',
+        ).annotate(
+            total_inventory=Sum('varieties__inventory'),
+                    )
+    
+    @admin.display(description='# COMMENTS')
+    def comments(self, laptop):
+        # content_type = ContentType.objects.get_for_model(laptop.__class__)
+        # print(laptop)
+        url = (
+            reverse('admin:store_comment_changelist')
+            + '?'
+            + urlencode({
+                'object_id': laptop.id
+            })
+        )
+        return format_html('<a href="{}">{}</a>',url , 'SEE')
+
+
+    @admin.display(description='#variety')
+    def laptop_variety(self, laptop):
+        """
+        Display variety based on color and price.
+        """
+        colored_circles = [
+            format_html(
+                f'<div style="display: flex; align-items: center;">'
+                f'<div style="margin-top: 2px; width: 20px; height:'
+                f'20px; border-radius: 50%; background-color: {variety.color_code};'
+                f'border: 2px solid #B9B9B9; margin-right:5px; display:'
+                f'inline-block; text-align: center; line-height: 20px;"></div>'
+                f'(Inventory: {variety.inventory}) (Price: ${variety.unit_price})</div>'
+            ) for variety in laptop.varieties.all()
+        ]
+        return format_html(' '. join(colored_circles))
+
+    
+    @admin.display(ordering='total_inventory', description='# Total Inventory')
+    def total_inventory(self, laptop):
+        """
+        Display total inventory of each laptop.
+        """
+        return laptop.total_inventory
+    
+    @admin.action(description='Make Unavailable')
+    def make_unavailable(self, request, queryset):
+        """
+        A action method for unavailable laptop.
+        """
+        laptop_names = list(queryset.values_list("name", flat=True))
+        queryset.update(available=False)
+        self.message_user(
+            request,
+            f'The mobile {" , ".join(laptop_names)} unavailabled'
+        )
+
+    @admin.action(description='Make Available')
+    def make_available(self, request, queryset):
+        """
+        A action method for available laptop.
+        """
+        laptop_names = list(queryset.values_list("name", flat=True))
+        queryset.update(available=True)
+        self.message_user(
+            request,
+            f'The mobile {" , ".join(laptop_names)} availabled'
         )
 
 
