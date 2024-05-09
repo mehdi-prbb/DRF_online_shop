@@ -1,20 +1,23 @@
 from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404
-from django.contrib.contenttypes.models import ContentType
 
-from rest_framework.response import Response
 from rest_framework import status
-from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.decorators import action
+from rest_framework.response import Response
 from rest_framework.generics import ListAPIView
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.viewsets import ReadOnlyModelViewSet, GenericViewSet, ModelViewSet
-from rest_framework.mixins import ListModelMixin, RetrieveModelMixin, DestroyModelMixin, CreateModelMixin, UpdateModelMixin
-from rest_framework.permissions import IsAuthenticated, AllowAny, IsAuthenticatedOrReadOnly
+from rest_framework.mixins import ListModelMixin, RetrieveModelMixin, DestroyModelMixin, CreateModelMixin
 
 from store.filters import MobileFilterSet
 
-from .permissions import IsOwnerOrReadonly
 from . import serializers
-from .models import Cart, CartItem, Category, Comment, Laptop, Mobile, Order, OrderItem, Variety
+from .permissions import IsOwnerOrReadonly
+from .models import (Cart, CartItem, Category, Laptop,
+                    Mobile, Order, CommentLike,
+                    CommentDislike, Comment
+                    )
 
 
 class CategoryViewSet(ListModelMixin, GenericViewSet):
@@ -104,8 +107,11 @@ class LaptopByBrandViewSet(ListAPIView):
 
 
 class CommentsViewSet(
-    CreateModelMixin, RetrieveModelMixin, ListModelMixin, DestroyModelMixin, GenericViewSet
-):
+                    CreateModelMixin,
+                    RetrieveModelMixin,
+                    ListModelMixin,
+                    DestroyModelMixin,
+                    GenericViewSet):
     """
     A class to leave, list, retrieve and delete comments.
     """
@@ -114,6 +120,7 @@ class CommentsViewSet(
     ordering = ['-datetime_created']
 
     def get_queryset(self):
+        
         model_mapping = {
             'mobile': Mobile,
             'laptop': Laptop
@@ -125,7 +132,7 @@ class CommentsViewSet(
         model_instance = get_object_or_404(model_class, slug=slug_key)
         self.product = model_instance
         return model_instance.comments.filter(status='a').order_by(
-            'datetime_created').select_related('owner', 'content_type')
+            '-datetime_created').select_related('owner', 'content_type').prefetch_related('likes', 'dislikes')
 
     def create(self, request, *args, **kwargs):
         if not hasattr(self, 'product'):
@@ -139,6 +146,53 @@ class CommentsViewSet(
         serializer.save()
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+    
+    @action(detail=True, methods=['post'], serializer_class=serializers.LikeSerializer)
+    def like(self, request, *args, **kwargs):
+        if not hasattr(self, 'product'):
+            self.get_queryset()
+
+        product = self.product
+        id = kwargs.get('pk')
+        user = request.user
+        comment = get_object_or_404(Comment, id=id, object_id=product.id, status='a')
+        like = CommentLike.objects.filter(comment=comment, user=user)
+        dislike = CommentDislike.objects.filter(comment=comment, user=user)
+
+        if like:
+            like.delete()
+            return Response({'message': 'unliked.'}, status=status.HTTP_200_OK)
+        elif dislike:
+            dislike.delete()
+            CommentLike.objects.create(comment=comment, user=self.request.user)
+            return Response({'message': 'dislike erased and liked.'}, status=status.HTTP_200_OK)
+        else:
+            CommentLike.objects.create(comment=comment, user=self.request.user)
+            return Response({'message': 'liked.'}, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'], serializer_class=serializers.DislikeSerializer)
+    def dislike(self, request, *args, **kwargs):
+        if not hasattr(self, 'product'):
+            self.get_queryset()
+        
+        product = self.product
+        id = kwargs.get('pk')
+        user = request.user
+        comment = get_object_or_404(Comment, id=id, object_id=product.id, status='a')
+        dislike = CommentDislike.objects.filter(comment=comment, user=user)
+        like = CommentLike.objects.filter(comment=comment, user=user)
+        
+
+        if dislike:
+            dislike.delete()
+            return Response({'message': 'undisliked.'}, status=status.HTTP_200_OK)
+        elif like:
+            like.delete()
+            CommentDislike.objects.create(comment=comment, user=self.request.user)
+            return Response({'message': 'like erased and disliked.'}, status=status.HTTP_200_OK)
+        else:
+            CommentDislike.objects.create(comment=comment, user=self.request.user)
+            return Response({'message': 'disliked.'}, status=status.HTTP_200_OK)
 
 
     def get_permissions(self):

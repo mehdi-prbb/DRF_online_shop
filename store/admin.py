@@ -1,12 +1,11 @@
-from django.contrib.contenttypes.models import ContentType
-from django.contrib import admin
-from django.urls import reverse
-from django.utils.http import urlencode
-from django.contrib.contenttypes.admin import GenericTabularInline
-from django.utils.html import format_html
-from django.db.models import Sum, Prefetch
-from django.db import models
 from django import forms
+from django.db import models
+from django.urls import reverse
+from django.db.models import Sum
+from django.contrib import admin
+from django.utils.http import urlencode
+from django.utils.html import format_html
+from django.contrib.contenttypes.admin import GenericTabularInline
 
 from .models import (
                     Category, Customer, Discount,
@@ -21,7 +20,8 @@ class CommentAdmmin(admin.ModelAdmin):
     list_display = [
                     'id', 'product_name', 'category',
                     'short_title', 'owner', 'status',
-                    'datetime_created'
+                    'datetime_created', 
+                    'likes', 'dislikes'
                     ]
     readonly_fields = ['owner', 'title', 'body']
     list_editable = ['status']
@@ -29,7 +29,11 @@ class CommentAdmmin(admin.ModelAdmin):
     list_per_page = 10
 
     def get_queryset(self, request):
-        return Comment.objects.prefetch_related('content_object').select_related('content_type', 'owner')
+        return Comment.objects.prefetch_related(
+            'content_object',
+            'likes', 'dislikes',
+            'content_type') \
+            .select_related('content_type', 'owner')
 
 
     @admin.display(ordering='title', description='title')
@@ -43,6 +47,14 @@ class CommentAdmmin(admin.ModelAdmin):
     @admin.display(description='category')
     def category(self, comment):
         return comment.content_type.name
+    
+    @admin.display(description='likes')
+    def likes(self, comment):
+        return comment.likes.count()
+    
+    @admin.display(description='dislikes')
+    def dislikes(self, comment):
+        return comment.dislikes.count()
 
 
     def has_add_permission(self, request, obj=None):
@@ -122,13 +134,15 @@ class InventoryFilter(admin.SimpleListFilter):
 @admin.register(Mobile)
 class MobileAdmin(admin.ModelAdmin):
     list_display = [
-                    'id', 'name', 'category',
+                    'short_id', 'name', 'category',
                     'mobile_variety','total_inventory',
                     'available', 'datetime_created',
                     'comments'
                     ]
     readonly_fields = ['id']
+    list_display_links = ['short_id', 'name']
     list_per_page = 10
+    ordering = ['-datetime_created']
     list_filter = [InventoryFilter, 'datetime_created', 'available']
     search_fields = ['name', 'category__title']
     autocomplete_fields = ['category', 'discount']
@@ -150,6 +164,11 @@ class MobileAdmin(admin.ModelAdmin):
         ).annotate(
             total_inventory=Sum('varieties__inventory'),
                     )
+    
+    @admin.display(description='id', ordering='id')
+    def short_id(self, obj):
+        return str(obj.id)[:7]
+
     
     @admin.display(description='# COMMENTS')
     def comments(self, obj):
@@ -216,12 +235,13 @@ class MobileAdmin(admin.ModelAdmin):
 @admin.register(Laptop)
 class LaptopAdmin(admin.ModelAdmin):
     list_display = [
-                    'id', 'name', 'category',
+                    'short_id', 'name', 'category',
                     'laptop_variety','total_inventory',
                     'available', 'datetime_created',
                     'comments'
                     ]
     readonly_fields = ['id']
+    list_display_links = ['short_id', 'name']
     list_per_page = 10
     list_filter = [InventoryFilter, 'datetime_created', 'available']
     search_fields = ['name', 'category__title']
@@ -245,10 +265,12 @@ class LaptopAdmin(admin.ModelAdmin):
             total_inventory=Sum('varieties__inventory'),
                     )
     
+    @admin.display(description='id', ordering='id')
+    def short_id(self, obj):
+        return str(obj.id)[:7]
+    
     @admin.display(description='# COMMENTS')
     def comments(self, laptop):
-        # content_type = ContentType.objects.get_for_model(laptop.__class__)
-        # print(laptop)
         url = (
             reverse('admin:store_comment_changelist')
             + '?'

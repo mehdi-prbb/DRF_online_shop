@@ -1,7 +1,10 @@
 from django.db import transaction
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers
-from .models import Cart, CartItem, Category, Customer, Laptop, Mobile, Comment, Image, Order, OrderItem, Variety
+from .models import (Cart, CartItem, Category, CommentLike,
+                    Customer, Laptop, Mobile, Comment,
+                    Image, Order, OrderItem, Variety
+                    )
 
 
 class VaritySerializer(serializers.ModelSerializer):
@@ -76,10 +79,14 @@ class LaptopDetailSerializer(serializers.ModelSerializer):
 
 class CommentsSerializer(serializers.ModelSerializer):
     owner = serializers.SerializerMethodField()
+    likes_count = serializers.SerializerMethodField()
+    dislikes_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Comment
-        fields = ['id', 'title', 'body', 'owner', 'datetime_created']
+        fields = ['id', 'title', 'body', 'owner',
+                  'datetime_created', 'likes_count',
+                  'dislikes_count']
 
     def get_owner(self, obj):
         if obj.owner.first_name and obj.owner.last_name:
@@ -92,11 +99,25 @@ class CommentsSerializer(serializers.ModelSerializer):
             return f'{obj.owner.username}'
         return 'Anonymous user'
     
-    # def create(self, validated_data):
-        # product = self.context['product']
-        # validated_data['content_object'] = product
-        # validated_data['owner'] = self.context['user']
-        # return Comment.objects.create(**validated_data)
+    def get_likes_count(self, obj):
+        return obj.likes.count()
+    
+    def get_dislikes_count(self, obj):
+        return obj.dislikes.count()
+    
+
+class LikeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CommentLike
+        fields = ['user', 'comment']
+        read_only_fields = ['user', 'comment']
+
+
+class DislikeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CommentLike
+        fields = ['user', 'comment']
+        read_only_fields = ['user', 'comment']
 
 
 class SecondLevelSubCategorySerializer(serializers.ModelSerializer):

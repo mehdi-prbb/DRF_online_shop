@@ -87,6 +87,24 @@ class Comment(models.Model):
         return self.content_object.name
     
 
+class CommentLike(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL,
+                             on_delete=models.CASCADE)
+    comment = models.ForeignKey(Comment,
+                                on_delete=models.CASCADE,
+                                related_name='likes')
+    datetime_created = models.DateTimeField(auto_now_add=True)
+    
+
+class CommentDislike(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL,
+                             on_delete=models.CASCADE)
+    comment = models.ForeignKey(Comment,
+                                on_delete=models.CASCADE,
+                                related_name='dislikes')
+    datetime_created = models.DateTimeField(auto_now_add=True)
+
+
 class Variety(models.Model):
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
     object_id = models.UUIDField(default=uuid4)
