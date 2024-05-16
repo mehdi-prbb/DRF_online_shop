@@ -22,7 +22,8 @@ cart_items_router.register('items', views.CartItemViewset, basename='cart-items'
 
 urlpatterns = [
     path('mobile-brand-<str:slug>/', views.MobileByBrandViewSet.as_view(), name='mobile-by-brand'),
-    path('laptop-brand-<str:slug>/', views.LaptopByBrandViewSet.as_view(), name='laptop-by-brand')
+    path('laptop-brand-<str:slug>/', views.LaptopByBrandViewSet.as_view(), name='laptop-by-brand'),
+    path('search/', views.GlobalSearchView.as_view(), name='search'),
 ]
 
 

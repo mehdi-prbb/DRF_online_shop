@@ -1,6 +1,7 @@
 from django.db import transaction
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers
+from rest_framework.reverse import reverse
 from .models import (Cart, CartItem, Category, CommentLike,
                     Customer, Laptop, Mobile, Comment,
                     Image, Order, OrderItem, Variety
@@ -20,7 +21,7 @@ class ImageSerializer(serializers.ModelSerializer):
         fields = ['image']
 
 
-class MobilesListSerializer(serializers.HyperlinkedModelSerializer):
+class MobileListSerializer(serializers.HyperlinkedModelSerializer):
     varieties = VaritySerializer(many=True)
     images = ImageSerializer(many=True)
     url = serializers.HyperlinkedIdentityField(view_name='mobile-detail', lookup_field='slug')
@@ -50,7 +51,7 @@ class MobileDetailSerializer(serializers.ModelSerializer):
                   'discount', 'available']
         
 
-class laptopListSerializer(serializers.HyperlinkedModelSerializer):
+class LaptopListSerializer(serializers.HyperlinkedModelSerializer):
     varieties = VaritySerializer(many=True)
     images = ImageSerializer(many=True)
     url = serializers.HyperlinkedIdentityField(view_name='laptop-detail', lookup_field='slug')
@@ -123,7 +124,7 @@ class DislikeSerializer(serializers.ModelSerializer):
 class SecondLevelSubCategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
-        fields = ['id', 'title', 'slug']
+        fields = ['id', 'title']
 
 
 class FirstLevelSubCategorySerializer(serializers.ModelSerializer):
@@ -131,7 +132,7 @@ class FirstLevelSubCategorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Category
-        fields = ['id', 'title', 'slug', 'subsets']
+        fields = ['id', 'title', 'subsets']
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -145,7 +146,7 @@ class CategoriesSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Category
-        fields = ['id', 'title', 'slug', 'subsets']
+        fields = ['id', 'title', 'subsets']
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -369,3 +370,27 @@ class OrderCreateSerializer(serializers.Serializer):
             Cart.objects.get(id=cart_id).delete()
 
             return order
+        
+class SearchSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=255)
+    category = serializers.CharField(max_length=255, source='category__sub_category__title')
+    link = serializers.SerializerMethodField()
+
+    def get_link(self, obj):
+        # Define a dictionary to map model class names to their detail view names
+        model_to_detail_view = {
+            'Mobile': 'mobile-detail',
+            'Laptop': 'laptop-detail',
+        }
+
+        # Get the class name of the object
+        class_name = obj['model_name']
+
+        # Get the detail view name based on the class name
+        detail_view_name = model_to_detail_view.get(class_name)
+
+        if detail_view_name:
+            # Reverse the detail view URL using the view name and object's primary key
+            return reverse(detail_view_name, kwargs={'slug': obj['slug']}, request=self.context.get('request'))
+
+        return None

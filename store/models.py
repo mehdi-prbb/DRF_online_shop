@@ -17,7 +17,7 @@ class Category(models.Model):
                                     )
     is_sub = models.BooleanField(default=False)
     title = models.CharField(max_length=255)
-    slug = models.SlugField(max_length=255, unique=True)
+    slug = models.SlugField(max_length=255)
 
     class Meta:
         verbose_name_plural = 'categories'

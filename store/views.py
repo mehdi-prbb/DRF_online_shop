@@ -1,5 +1,7 @@
+from django.db.models import Value
 from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404
+from functools import reduce
 
 from rest_framework import status
 from rest_framework.decorators import action
@@ -13,6 +15,7 @@ from rest_framework.mixins import ListModelMixin, RetrieveModelMixin, DestroyMod
 from store.filters import MobileFilterSet
 
 from . import serializers
+from . paginations import CustomPagination
 from .permissions import IsOwnerOrReadonly
 from .models import (Cart, CartItem, Category, Laptop,
                     Mobile, Order, CommentLike,
@@ -40,35 +43,40 @@ class MobileViewSet(ReadOnlyModelViewSet):
     """
     Returns the list and details of mobiles and filter them by brands.
     """
-    queryset = Mobile.objects.prefetch_related('discount', 'images', 'varieties')
+    queryset = Mobile.objects.prefetch_related(
+        'discount', 'images', 'varieties')
     filter_backends = [DjangoFilterBackend]
     lookup_field = 'slug'
 
     def get_queryset(self):
-        return Mobile.objects.prefetch_related('discount', 'images', 'varieties')
+        return Mobile.objects.prefetch_related(
+            'discount', 'images', 'varieties')
 
     def get_serializer_class(self):
         if self.action == 'retrieve':
             return serializers.MobileDetailSerializer
-        return serializers.MobilesListSerializer
+        return serializers.MobileListSerializer
 
 
 class MobileByBrandViewSet(ListAPIView):
     """
     Returns the list and details of mobiles and filter them by brands.
     """
-    serializer_class = serializers.MobilesListSerializer
+    serializer_class = serializers.MobileListSerializer
 
     def get(self, request, *args, **kwargs):
         queryset = self.get_queryset()
-        if not queryset.exists():
-            return Response({'detail':'Mobile brand not found.'}, status=status.HTTP_404_NOT_FOUND) 
+        if not queryset:
+            return Response({'detail':'Mobile brand not found.'},
+                            status=status.HTTP_404_NOT_FOUND) 
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
     def get_queryset(self):
         category = self.kwargs['slug']
-        return Mobile.objects.prefetch_related('discount', 'images', 'varieties').filter(category__slug=category)
+        return Mobile.objects.prefetch_related(
+            'discount', 'images', 'varieties') \
+                .filter(category__slug=category)
     
 
 class LaptopViewSet(ReadOnlyModelViewSet):
@@ -85,25 +93,27 @@ class LaptopViewSet(ReadOnlyModelViewSet):
     def get_serializer_class(self):
         if self.action == 'retrieve':
             return serializers.LaptopDetailSerializer
-        return serializers.laptopListSerializer
+        return serializers.LaptopListSerializer
 
 
 class LaptopByBrandViewSet(ListAPIView):
     """
     Returns the list and details of laptops and filter them by brands.
     """
-    serializer_class = serializers.laptopListSerializer
+    serializer_class = serializers.LaptopListSerializer
 
     def get(self, request, *args, **kwargs):
         queryset = self.get_queryset()
-        if not queryset.exists():
-            return Response({'detail':'Laptop brand not found.'}, status=status.HTTP_404_NOT_FOUND) 
+        if not queryset:
+            return Response({'detail':'Laptop brand not found.'},
+                            status=status.HTTP_404_NOT_FOUND) 
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
     def get_queryset(self):
         category = self.kwargs['slug']
-        return Laptop.objects.prefetch_related('discount', 'images', 'varieties').filter(category__slug=category)
+        return Laptop.objects.prefetch_related('discount', 'images', 'varieties') \
+            .filter(category__slug=category)
 
 
 class CommentsViewSet(
@@ -132,7 +142,9 @@ class CommentsViewSet(
         model_instance = get_object_or_404(model_class, slug=slug_key)
         self.product = model_instance
         return model_instance.comments.filter(status='a').order_by(
-            '-datetime_created').select_related('owner', 'content_type').prefetch_related('likes', 'dislikes')
+            '-datetime_created').select_related(
+                'owner', 'content_type') \
+                    .prefetch_related('likes', 'dislikes')
 
     def create(self, request, *args, **kwargs):
         if not hasattr(self, 'product'):
@@ -147,7 +159,8 @@ class CommentsViewSet(
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     
-    @action(detail=True, methods=['post'], serializer_class=serializers.LikeSerializer)
+    @action(detail=True, methods=['post'],
+            serializer_class=serializers.LikeSerializer)
     def like(self, request, *args, **kwargs):
         if not hasattr(self, 'product'):
             self.get_queryset()
@@ -170,7 +183,8 @@ class CommentsViewSet(
             CommentLike.objects.create(comment=comment, user=self.request.user)
             return Response({'message': 'liked.'}, status=status.HTTP_200_OK)
 
-    @action(detail=True, methods=['post'], serializer_class=serializers.DislikeSerializer)
+    @action(detail=True, methods=['post'],
+            serializer_class=serializers.DislikeSerializer)
     def dislike(self, request, *args, **kwargs):
         if not hasattr(self, 'product'):
             self.get_queryset()
@@ -266,3 +280,30 @@ class OrderViewSet(ModelViewSet):
 
         serializer = serializers.OrderSerializer(created_order)
         return Response(serializer.data)
+
+
+class GlobalSearchView(ListAPIView):
+    pagination_class = CustomPagination
+    serializer_class = serializers.SearchSerializer
+
+    def get(self, request, *args, **kwargs):
+        query = self.request.query_params.get('query', '')
+        if not query:
+            return Response({'detail': 'not found.'})
+
+        return super().get(request, *args, **kwargs)
+
+    def get_queryset(self):
+        query = self.request.query_params.get('query', '')
+
+        mobile_queryset = Mobile.objects.filter(name__icontains=query) \
+            .values('name', 'slug', 'category__sub_category__title') \
+                .annotate(model_name=Value('Mobile'))
+        laptop_queryset = Laptop.objects.filter(name__icontains=query) \
+            .values('name', 'slug', 'category__sub_category__title') \
+                .annotate(model_name=Value('Laptop'))
+
+        # Combine the querysets using the union operator
+        combined_queryset = mobile_queryset.union(laptop_queryset)
+
+        return combined_queryset
