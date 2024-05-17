@@ -10,10 +10,10 @@ from django.contrib.contenttypes.admin import GenericTabularInline
 from .models import (
                     Category, Customer, Discount,
                     Mobile, Comment, Variety, Laptop,
-                    Image, Order, OrderItem, Cart, CartItem
+                    Image, Order, OrderItem,
+                    Cart, CartItem, HeadPhone
                     )
 
-# admin.site.register(Laptop)
 
 @admin.register(Comment)
 class CommentAdmmin(admin.ModelAdmin):
@@ -130,41 +130,12 @@ class InventoryFilter(admin.SimpleListFilter):
             return queryset.filter(total_inventory__gt=10)
         
 
-
-@admin.register(Mobile)
-class MobileAdmin(admin.ModelAdmin):
-    list_display = [
-                    'short_id', 'name', 'category',
-                    'mobile_variety','total_inventory',
-                    'available', 'datetime_created',
-                    'comments'
-                    ]
-    readonly_fields = ['id']
-    list_display_links = ['short_id', 'name']
-    list_per_page = 10
-    ordering = ['-datetime_created']
-    list_filter = [InventoryFilter, 'datetime_created', 'available']
-    search_fields = ['name', 'category__title']
-    autocomplete_fields = ['category', 'discount']
-    inlines = [VarietyInline, ImageInline,]
-    actions = ['make_unavailable', 'make_available']
-    show_facets = admin.ShowFacets.NEVER
-    prepopulated_fields = {
-        'slug': ['name', ]
-    }
+class ProductAdmin(admin.ModelAdmin):
 
     formfield_overrides = {
         models.TextField: {'widget': forms.Textarea(attrs={'rows': 3, 'cols': 30})},
     }
 
-    def get_queryset(self, request):
-        return Mobile.objects.select_related('category__sub_category') \
-        .prefetch_related(
-            'varieties',
-        ).annotate(
-            total_inventory=Sum('varieties__inventory'),
-                    )
-    
     @admin.display(description='id', ordering='id')
     def short_id(self, obj):
         return str(obj.id)[:7]
@@ -183,7 +154,7 @@ class MobileAdmin(admin.ModelAdmin):
 
 
     @admin.display(description='#variety')
-    def mobile_variety(self, mobile):
+    def product_variety(self, obj):
         """
         Display variety based on color and price.
         """
@@ -195,28 +166,28 @@ class MobileAdmin(admin.ModelAdmin):
                 f'border: 2px solid #B9B9B9; margin-right:5px; display:'
                 f'inline-block; text-align: center; line-height: 20px;"></div>'
                 f'(Inventory: {variety.inventory}) (Price: ${variety.unit_price})</div>'
-            ) for variety in mobile.varieties.all()
+            ) for variety in obj.varieties.all()
         ]
         return format_html(' '. join(colored_circles))
 
     
     @admin.display(ordering='total_inventory', description='# Total Inventory')
-    def total_inventory(self, mobile):
+    def total_inventory(self, obj):
         """
         Display total inventory of each mobile.
         """
-        return mobile.total_inventory
+        return obj.total_inventory
     
     @admin.action(description='Make Unavailable')
     def make_unavailable(self, request, queryset):
         """
         A action method for unavailable mobiles.
         """
-        mobile_names = list(queryset.values_list("name", flat=True))
+        obj_names = list(queryset.values_list("name", flat=True))
         queryset.update(available=False)
         self.message_user(
             request,
-            f'The mobile {" , ".join(mobile_names)} unavailabled'
+            f'The mobile {" , ".join(obj_names)} unavailabled'
         )
 
     @admin.action(description='Make Available')
@@ -224,19 +195,50 @@ class MobileAdmin(admin.ModelAdmin):
         """
         A action method for available mobiles.
         """
-        mobile_names = list(queryset.values_list("name", flat=True))
+        obj_names = list(queryset.values_list("name", flat=True))
         queryset.update(available=True)
         self.message_user(
             request,
-            f'The mobile {" , ".join(mobile_names)} availabled'
+            f'The mobile {" , ".join(obj_names)} availabled'
         )
 
 
-@admin.register(Laptop)
-class LaptopAdmin(admin.ModelAdmin):
+@admin.register(Mobile)
+class MobileAdmin(ProductAdmin):
     list_display = [
                     'short_id', 'name', 'category',
-                    'laptop_variety','total_inventory',
+                    'product_variety','total_inventory',
+                    'available', 'datetime_created',
+                    'comments'
+                    ]
+    readonly_fields = ['id']
+    list_display_links = ['short_id', 'name']
+    list_per_page = 10
+    ordering = ['-datetime_created']
+    list_filter = [InventoryFilter, 'datetime_created', 'available']
+    search_fields = ['name', 'category__title']
+    autocomplete_fields = ['category', 'discount']
+    inlines = [VarietyInline, ImageInline,]
+    actions = ['make_unavailable', 'make_available']
+    show_facets = admin.ShowFacets.NEVER
+    prepopulated_fields = {
+        'slug': ['name', ]
+    }
+
+    def get_queryset(self, request):
+        return Mobile.objects.select_related('category__sub_category') \
+        .prefetch_related(
+            'varieties',
+        ).annotate(
+            total_inventory=Sum('varieties__inventory'),
+                    )
+
+
+@admin.register(Laptop)
+class LaptopAdmin(ProductAdmin):
+    list_display = [
+                    'short_id', 'name', 'category',
+                    'product_variety','total_inventory',
                     'available', 'datetime_created',
                     'comments'
                     ]
@@ -253,10 +255,6 @@ class LaptopAdmin(admin.ModelAdmin):
         'slug': ['name', ]
     }
 
-    formfield_overrides = {
-        models.TextField: {'widget': forms.Textarea(attrs={'rows': 3, 'cols': 30})},
-    }
-
     def get_queryset(self, request):
         return Laptop.objects.select_related('category__sub_category') \
         .prefetch_related(
@@ -265,70 +263,35 @@ class LaptopAdmin(admin.ModelAdmin):
             total_inventory=Sum('varieties__inventory'),
                     )
     
-    @admin.display(description='id', ordering='id')
-    def short_id(self, obj):
-        return str(obj.id)[:7]
-    
-    @admin.display(description='# COMMENTS')
-    def comments(self, laptop):
-        url = (
-            reverse('admin:store_comment_changelist')
-            + '?'
-            + urlencode({
-                'object_id': laptop.id
-            })
-        )
-        return format_html('<a href="{}">{}</a>',url , 'SEE')
 
+@admin.register(HeadPhone)
+class HeadPhoneAdmin(ProductAdmin):
+    list_display = [
+                    'short_id', 'name', 'category',
+                    'product_variety','total_inventory',
+                    'available', 'datetime_created',
+                    'comments'
+                    ]
+    readonly_fields = ['id']
+    list_display_links = ['short_id', 'name']
+    list_per_page = 10
+    list_filter = [InventoryFilter, 'datetime_created', 'available']
+    search_fields = ['name', 'category__title']
+    autocomplete_fields = ['category', 'discount']
+    inlines = [VarietyInline, ImageInline,]
+    actions = ['make_unavailable', 'make_available']
+    show_facets = admin.ShowFacets.NEVER
+    prepopulated_fields = {
+        'slug': ['name', ]
+    }
 
-    @admin.display(description='#variety')
-    def laptop_variety(self, laptop):
-        """
-        Display variety based on color and price.
-        """
-        colored_circles = [
-            format_html(
-                f'<div style="display: flex; align-items: center;">'
-                f'<div style="margin-top: 2px; width: 20px; height:'
-                f'20px; border-radius: 50%; background-color: {variety.color_code};'
-                f'border: 2px solid #B9B9B9; margin-right:5px; display:'
-                f'inline-block; text-align: center; line-height: 20px;"></div>'
-                f'(Inventory: {variety.inventory}) (Price: ${variety.unit_price})</div>'
-            ) for variety in laptop.varieties.all()
-        ]
-        return format_html(' '. join(colored_circles))
-
-    
-    @admin.display(ordering='total_inventory', description='# Total Inventory')
-    def total_inventory(self, laptop):
-        """
-        Display total inventory of each laptop.
-        """
-        return laptop.total_inventory
-    
-    @admin.action(description='Make Unavailable')
-    def make_unavailable(self, request, queryset):
-        """
-        A action method for unavailable laptop.
-        """
-        laptop_names = list(queryset.values_list("name", flat=True))
-        queryset.update(available=False)
-        self.message_user(
-            request,
-            f'The mobile {" , ".join(laptop_names)} unavailabled'
-        )
-
-    @admin.action(description='Make Available')
-    def make_available(self, request, queryset):
-        """
-        A action method for available laptop.
-        """
-        laptop_names = list(queryset.values_list("name", flat=True))
-        queryset.update(available=True)
-        self.message_user(
-            request,
-            f'The mobile {" , ".join(laptop_names)} availabled'
-        )
+    def get_queryset(self, request):
+        return HeadPhone.objects.select_related('category__sub_category') \
+        .prefetch_related(
+            'varieties',
+        ).annotate(
+            total_inventory=Sum('varieties__inventory'),
+                    )
 
 
 @admin.register(Customer)
@@ -363,12 +326,7 @@ class CustomerAdmin(admin.ModelAdmin):
         return customer.user.email
 
 
-
-class CartItemInline(admin.TabularInline):
-    """
-    Display items in cart.
-    """
-    model = CartItem
+class OrderAndCartProductDetails(admin.TabularInline):
     fields = [
         'product_type', 'product_name', 'product_color',
         'product_unit_price', 'quantity', 'items_total_price'
@@ -379,9 +337,6 @@ class CartItemInline(admin.TabularInline):
         'quantity', 'items_total_price'
         ]
     max_num = 0
-
-    def get_queryset(self, request):
-        return CartItem.objects.prefetch_related('content_object', 'content_type', 'variety')
 
     def product_type(self, item):
         return f'{item.content_type.name}'
@@ -402,6 +357,19 @@ class CartItemInline(admin.TabularInline):
     def items_total_price(self, item):
         return item.quantity * item.variety.unit_price
     items_total_price.short_description = 'Items total price'
+
+class CartItemInline(OrderAndCartProductDetails):
+    """
+    Display items in cart.
+    """
+    model = CartItem
+
+    def get_queryset(self, request):
+        return CartItem.objects.prefetch_related(
+            'content_object',
+            'content_type',
+            'variety')
+
 
 @admin.register(Cart)
 class CartAdmin(admin.ModelAdmin):
@@ -420,50 +388,15 @@ class CartAdmin(admin.ModelAdmin):
         return sum([item.quantity * item.variety.unit_price for item in cart.items.all()])
 
 
-class OrderItemInline(admin.TabularInline):
+class OrderItemInline(OrderAndCartProductDetails):
     model = OrderItem
-    fields = [
-        'product_type', 'product_name', 'product_color',
-        'product_unit_price',
-         'quantity',
-         'items_total_price'
-        ]
-    readonly_fields = [
-        'product_type', 'product_name',
-        'product_color',
-          'product_unit_price',
-        'quantity',
-         'items_total_price'
-        ]
-    max_num = 0
-
+   
     def get_queryset(self, request):
         return OrderItem.objects.prefetch_related(
                             'content_type',
                             'content_object',
                             'variety'
                             )
-
-
-    def product_type(self, item):
-        return f'{item.content_type.name}'
-    product_type.short_description = 'Product type'
-
-    def product_name(self, item):
-        return f'{item.content_object.name}'
-    product_name.short_description = 'Product name'
-
-    def product_color(self, item):
-        return f'{item.variety.color_name}'
-    product_color.short_description = 'Product color'
-
-    def product_unit_price(self, item):
-        return f'{item.variety.unit_price}'
-    product_unit_price.short_description = 'Product unit price'
-
-    def items_total_price(self, item):
-        return item.quantity * item.variety.unit_price
-    items_total_price.short_description = 'Items total price'
 
 
 @admin.register(Order)

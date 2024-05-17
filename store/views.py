@@ -17,7 +17,7 @@ from store.filters import MobileFilterSet
 from . import serializers
 from . paginations import CustomPagination
 from .permissions import IsOwnerOrReadonly
-from .models import (Cart, CartItem, Category, Laptop,
+from .models import (Cart, CartItem, Category, HeadPhone, Laptop,
                     Mobile, Order, CommentLike,
                     CommentDislike, Comment
                     )
@@ -79,6 +79,46 @@ class MobileByBrandViewSet(ListAPIView):
                 .filter(category__slug=category)
     
 
+class HeadPhoneViewSet(ReadOnlyModelViewSet):
+    """
+    Returns the list and details of mobiles and filter them by brands.
+    """
+    queryset = Mobile.objects.prefetch_related(
+        'discount', 'images', 'varieties')
+    filter_backends = [DjangoFilterBackend]
+    lookup_field = 'slug'
+
+    def get_queryset(self):
+        return HeadPhone.objects.prefetch_related(
+            'discount', 'images', 'varieties')
+
+    def get_serializer_class(self):
+        if self.action == 'retrieve':
+            return serializers.HeadPhoneDetailSerializer
+        return serializers.HeadPhoneListSerializer
+
+
+class HeadPhoneByBrandViewSet(ListAPIView):
+    """
+    Returns the list and details of mobiles and filter them by brands.
+    """
+    serializer_class = serializers.HeadPhoneListSerializer
+
+    def get(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        if not queryset:
+            return Response({'detail':'Mobile brand not found.'},
+                            status=status.HTTP_404_NOT_FOUND) 
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
+    def get_queryset(self):
+        category = self.kwargs['slug']
+        return HeadPhone.objects.prefetch_related(
+            'discount', 'images', 'varieties') \
+                .filter(category__slug=category)
+    
+
 class LaptopViewSet(ReadOnlyModelViewSet):
     """
     Returns the list and details of laptops and filter them by brands.
@@ -133,7 +173,8 @@ class CommentsViewSet(
         
         model_mapping = {
             'mobile': Mobile,
-            'laptop': Laptop
+            'laptop': Laptop,
+            'headphone': HeadPhone
         }
         model_name = self.request.resolver_match.url_name.split('-')[0]
         model_class = model_mapping.get(model_name)
@@ -225,7 +266,7 @@ class CartItemViewset(ModelViewSet):
     
     def get_serializer_class(self):
         if self.request.method == 'POST':
-            return serializers.AddCartItemSerialize
+            return serializers.AddCartItemSerializer
         elif self.request.method == 'PATCH':
             return serializers.UpdateCartItemserializer
         return serializers.CartItemSerializer
@@ -302,8 +343,11 @@ class GlobalSearchView(ListAPIView):
         laptop_queryset = Laptop.objects.filter(name__icontains=query) \
             .values('name', 'slug', 'category__sub_category__title') \
                 .annotate(model_name=Value('Laptop'))
+        headphone_queryset = HeadPhone.objects.filter(name__icontains=query) \
+            .values('name', 'slug', 'category__sub_category__title') \
+                .annotate(model_name=Value('HeadPhone'))
 
         # Combine the querysets using the union operator
-        combined_queryset = mobile_queryset.union(laptop_queryset)
+        combined_queryset = mobile_queryset.union(laptop_queryset, headphone_queryset)
 
         return combined_queryset

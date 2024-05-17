@@ -4,6 +4,8 @@ from django.db import models
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.core.validators import MinValueValidator
+from django.db.models import JSONField
+
 
 from colorfield.fields import ColorField
 
@@ -174,7 +176,20 @@ class Laptop(Product):
 
     def __str__(self):
         return self.name
-    
+
+
+class HeadPhone(Product):
+    form_factor = models.CharField(max_length=255)
+    power_supply = models.CharField(max_length=255)
+    connectivity_tec = models.CharField(max_length=255)
+    another_features = models.TextField()
+    comments = GenericRelation(Comment)
+    varieties = GenericRelation(Variety)
+    images = GenericRelation(Image)
+
+    def __str__(self):
+        return self.name
+
     
 class Customer(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL,
@@ -246,6 +261,6 @@ class CartItem(models.Model):
     def __str__(self):
         return f'{self.id}'
     
-
+    
     
     

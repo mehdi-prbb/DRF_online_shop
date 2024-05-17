@@ -1,9 +1,10 @@
 from django.db import transaction
 from django.core.exceptions import ObjectDoesNotExist
+from django.contrib.contenttypes.models import ContentType
 from rest_framework import serializers
 from rest_framework.reverse import reverse
 from .models import (Cart, CartItem, Category, CommentLike,
-                    Customer, Laptop, Mobile, Comment,
+                    Customer, HeadPhone, Laptop, Mobile, Comment,
                     Image, Order, OrderItem, Variety
                     )
 
@@ -48,6 +49,31 @@ class MobileDetailSerializer(serializers.ModelSerializer):
                   'size', 'screen_size', 'screen_size',
                   'picture_resolution','screen_technology',
                   'accessories', 'images','varieties',
+                  'discount', 'available']
+        
+
+class HeadPhoneListSerializer(serializers.HyperlinkedModelSerializer):
+    varieties = VaritySerializer(many=True)
+    images = ImageSerializer(many=True)
+    url = serializers.HyperlinkedIdentityField(view_name='headphone-detail', lookup_field='slug')
+
+    class Meta:
+        model = HeadPhone
+        fields = ['url', 'name', 'description',
+                  'form_factor','images','varieties',
+                  'discount', 'available']
+    
+
+class HeadPhoneDetailSerializer(serializers.ModelSerializer):
+    varieties = VaritySerializer(many=True)
+    images = ImageSerializer(many=True)
+
+    class Meta:
+        model = HeadPhone
+        fields = ['id', 'name', 'description',
+                  'form_factor', 'power_supply',
+                  'connectivity_tec', 'another_features',
+                  'images','varieties',
                   'discount', 'available']
         
 
@@ -185,14 +211,14 @@ class CartItemVaritySerializer(serializers.ModelSerializer):
         fields = ['unit_price', 'color_name', 'color_code']
 
 
-class AddCartItemSerialize(serializers.ModelSerializer):
+class AddCartItemSerializer(serializers.ModelSerializer):
     variety_id = serializers.IntegerField(write_only=True, required=True)
 
     class Meta:
         model = CartItem
         fields = ['id', 'content_type', 'object_id', 'quantity', 'variety_id']
 
-    ALLOWED_MODELS = ['mobile', 'laptop']
+    ALLOWED_MODELS = ['mobile', 'laptop', 'headphone']
         
 
     def validate(self, data):
@@ -381,6 +407,7 @@ class SearchSerializer(serializers.Serializer):
         model_to_detail_view = {
             'Mobile': 'mobile-detail',
             'Laptop': 'laptop-detail',
+            'HeadPhone': 'headphone-detail',
         }
 
         # Get the class name of the object
