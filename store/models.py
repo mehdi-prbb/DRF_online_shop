@@ -197,7 +197,7 @@ class Customer(models.Model):
     birth_date = models.DateField(null=True, blank=True)
 
     def __str__(self):
-        return self.user.phone_number
+        return self.user.email
     
 
 class Order(models.Model):

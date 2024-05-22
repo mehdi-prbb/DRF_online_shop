@@ -297,21 +297,21 @@ class HeadPhoneAdmin(ProductAdmin):
 @admin.register(Customer)
 class CustomerAdmin(admin.ModelAdmin):
     list_display = [
-                'phone_number', 'first_name',
-                'last_name', 'email'
+                'email', 'first_name',
+                'last_name'
                 ]
     list_per_page = 10
     search_fields = [
-                'user__phone_number', 'user__first_name',
+                'user__first_name',
                 'user__last_name', 'user__email'
                 ]
 
     def get_queryset(self, request):
         return Customer.objects.select_related('user')
 
-    @admin.display(ordering='user__phone_number')
-    def phone_number(self, customer):
-        return customer.user.phone_number
+    @admin.display(ordering='user__email')
+    def email(self, customer):
+        return customer.user.email
     
     @admin.display(ordering='user__first_name')
     def first_name(self, customer):

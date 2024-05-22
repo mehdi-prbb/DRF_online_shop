@@ -9,21 +9,21 @@ class CustomUserManager(UserManager):
 		create user and super user by phone number
 	"""
 
-	def create_user(self, phone_number, password):
-		if not phone_number:
+	def create_user(self, email, password):
+		if not email:
 			raise ValueError('user must have phone number')
 
-		else:
-			user = self.model(
-					phone_number=phone_number,
-					)
+		email = self.normalize_email(email)
+		user = self.model(
+				email=email
+				)
 		user.set_password(password)
 		user.save(using=self._db)
 		return user
 
-	def create_superuser(self, phone_number, password):
+	def create_superuser(self, email, password):
 		
-		user = self.create_user(phone_number, password)
+		user = self.create_user(email, password)
 		user.is_staff = True
 		user.is_superuser = True
 		user.save(using=self._db)

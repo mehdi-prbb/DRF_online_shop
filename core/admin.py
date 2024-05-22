@@ -5,7 +5,7 @@ from .models import CustomUser
 
 @admin.register(CustomUser)
 class CustomUserAdmin(UserAdmin):
-    list_display = ('phone_number', 'email', 'is_staff')
+    list_display = ('email', 'is_staff')
     list_filter = ('is_staff',)
     readonly_fields = ('last_login',)
 
@@ -15,7 +15,6 @@ class CustomUserAdmin(UserAdmin):
             'first_name',
             'last_name',
             'email',
-            'phone_number',
             'password'
             )}),
         ('permissions', {'fields':(
@@ -33,14 +32,13 @@ class CustomUserAdmin(UserAdmin):
             'username',
             'first_name',
             'last_name',
-            'phone_number',
             'email',
             'password1',
             'password2'
             )}),
     )
-    search_fields = ('phone_number',)
-    ordering = ('phone_number',)
+    search_fields = ('email',)
+    ordering = ('email',)
     filter_horizontal = ('groups', 'user_permissions')
 
     def get_form(self, request, obj=None, **kwargs):

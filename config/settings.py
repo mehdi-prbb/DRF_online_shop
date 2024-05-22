@@ -158,15 +158,26 @@ SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(days=1)
 }
 
+DJOSER = {
+    'SERIALIZERS': {
+        'user_create': 'core.serializers.UsercreateSerializer',
+        'current_user': 'core.serializers.UserSerializer',
+        'user': 'core.serializers.UserSerializer',
+    },
+    'PERMISSIONS': {
+        'username_reset': ['rest_framework.permissions.IsAdminUser'],
+        'username_reset_confirm': ['rest_framework.permissions.IsAdminUser'],
+    },
+    'LOGIN_FIELD': 'email',
+    'PASSWORD_RESET_CONFIRM_URL': 'core/auth/reset_password_confirm/{uid}/{token}',
+    'SEND_ACTIVATION_EMAIL': True,
+    'USER_CREATE_PASSWORD_RETYPE': True,
+    'ACTIVATION_URL': 'core/auth/activate/{uid}/{token}',
+}
+
 
 # Authentication settings
-
 AUTH_USER_MODEL = 'core.CustomUser'
-
-AUTHENTICATION_BACKENDS = [
-    'django.contrib.auth.backends.ModelBackend',
-    'core.authenticate.MobileBackend',
-]
 
 
 SPECTACULAR_SETTINGS = {
@@ -182,3 +193,5 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 # media config
 MEDIA_URL = '/media/'
 MEDIA_ROOT = str(BASE_DIR.joinpath('media'))
+
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'

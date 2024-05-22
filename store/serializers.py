@@ -38,10 +38,11 @@ class MobileListSerializer(serializers.HyperlinkedModelSerializer):
 class MobileDetailSerializer(serializers.ModelSerializer):
     varieties = VaritySerializer(many=True)
     images = ImageSerializer(many=True)
+    content_type_id = serializers.SerializerMethodField()
 
     class Meta:
         model = Mobile
-        fields = ['id', 'name', 'description',
+        fields = ['id', 'content_type_id', 'name', 'description',
                   'networks', 'memory_card_support',
                   'sim_card_number', 'sim_description',
                   'backs_camera', 'internal_memory',
@@ -51,6 +52,10 @@ class MobileDetailSerializer(serializers.ModelSerializer):
                   'accessories', 'images','varieties',
                   'discount', 'available']
         
+
+    def get_content_type_id(self, mobile):
+        content_type = ContentType.objects.get_for_model(mobile)
+        return content_type.id
 
 class HeadPhoneListSerializer(serializers.HyperlinkedModelSerializer):
     varieties = VaritySerializer(many=True)
@@ -67,14 +72,19 @@ class HeadPhoneListSerializer(serializers.HyperlinkedModelSerializer):
 class HeadPhoneDetailSerializer(serializers.ModelSerializer):
     varieties = VaritySerializer(many=True)
     images = ImageSerializer(many=True)
+    content_type_id = serializers.SerializerMethodField()
 
     class Meta:
         model = HeadPhone
-        fields = ['id', 'name', 'description',
+        fields = ['id', 'content_type_id', 'name', 'description',
                   'form_factor', 'power_supply',
                   'connectivity_tec', 'another_features',
                   'images','varieties',
                   'discount', 'available']
+        
+    def get_content_type_id(self, headphone):
+        content_type = ContentType.objects.get_for_model(headphone)
+        return content_type.id
         
 
 class LaptopListSerializer(serializers.HyperlinkedModelSerializer):
@@ -93,15 +103,20 @@ class LaptopListSerializer(serializers.HyperlinkedModelSerializer):
 class LaptopDetailSerializer(serializers.ModelSerializer):
     varieties = VaritySerializer(many=True)
     images = ImageSerializer(many=True)
+    content_type_id = serializers.SerializerMethodField()
 
     class Meta:
         model = Laptop
-        fields = ['id', 'name', 'description',
+        fields = ['id', 'content_type_id', 'name', 'description',
                   'cpu', 'internal_memory','ram', 
                   'gpu','battery_type', 'weight', 'screen_size',
                   'screen_resolution','dimensions', 'os_type', 'connections',
                   'accessories', 'images','varieties',
                   'discount', 'available']
+        
+    def get_content_type_id(self, laptop):
+        content_type = ContentType.objects.get_for_model(laptop)
+        return content_type.id
 
 
 class CommentsSerializer(serializers.ModelSerializer):
