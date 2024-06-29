@@ -296,22 +296,30 @@ class HeadPhoneAdmin(ProductAdmin):
 
 @admin.register(Customer)
 class CustomerAdmin(admin.ModelAdmin):
-    list_display = [
-                'email', 'first_name',
-                'last_name'
+    list_display = ['id', 'user',
+                'username',
+                'first_name',
+                'last_name',
+                'ssn',
+                'phone_number'
                 ]
+    readonly_fields = ['user',
+                'first_name', 'last_name',
+                'ssn','phone_number']
     list_per_page = 10
     search_fields = [
                 'user__first_name',
-                'user__last_name', 'user__email'
+                'user__last_name', 'user__email',
+                'user__profiles__phone_number',
+                'user__profiles__ssn'
                 ]
 
     def get_queryset(self, request):
-        return Customer.objects.select_related('user')
-
-    @admin.display(ordering='user__email')
-    def email(self, customer):
-        return customer.user.email
+        return Customer.objects.select_related('user__profiles')
+    
+    @admin.display(ordering='user__username')
+    def username(self, customer):
+        return customer.user.username
     
     @admin.display(ordering='user__first_name')
     def first_name(self, customer):
@@ -324,6 +332,14 @@ class CustomerAdmin(admin.ModelAdmin):
     @admin.display(ordering='user__email')
     def email(self, customer):
         return customer.user.email
+    
+    @admin.display(ordering='user__profiles__ssn')
+    def ssn(self, customer):
+        return customer.user.profiles.ssn
+
+    @admin.display(ordering='user__profiles__phone_number')
+    def phone_number(self, customer):
+        return customer.user.profiles.phone_number
 
 
 class OrderAndCartProductDetails(admin.TabularInline):

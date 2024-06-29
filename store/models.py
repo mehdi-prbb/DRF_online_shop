@@ -4,7 +4,6 @@ from django.db import models
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.core.validators import MinValueValidator
-from django.db.models import JSONField
 
 
 from colorfield.fields import ColorField
@@ -194,7 +193,6 @@ class HeadPhone(Product):
 class Customer(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL,
                                 on_delete=models.PROTECT)
-    birth_date = models.DateField(null=True, blank=True)
 
     def __str__(self):
         return self.user.email

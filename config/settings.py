@@ -161,12 +161,13 @@ SIMPLE_JWT = {
 DJOSER = {
     'SERIALIZERS': {
         'user_create': 'core.serializers.UsercreateSerializer',
-        'current_user': 'core.serializers.UserSerializer',
+        'current_user': 'core.serializers.CustomUserProfileSerializer',
         'user': 'core.serializers.UserSerializer',
     },
     'PERMISSIONS': {
         'username_reset': ['rest_framework.permissions.IsAdminUser'],
         'username_reset_confirm': ['rest_framework.permissions.IsAdminUser'],
+        'set_username': ['rest_framework.permissions.IsAdminUser'],
     },
     'LOGIN_FIELD': 'email',
     'PASSWORD_RESET_CONFIRM_URL': 'core/auth/reset_password_confirm/{uid}/{token}',
