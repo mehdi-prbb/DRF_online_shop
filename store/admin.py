@@ -17,6 +17,9 @@ from .models import (
 
 @admin.register(Comment)
 class CommentAdmmin(admin.ModelAdmin):
+    """
+    Custom admin interface for the Comment model.
+    """
     list_display = [
                     'id', 'product_name', 'category',
                     'short_title', 'owner', 'status',
@@ -66,6 +69,9 @@ class CommentAdmmin(admin.ModelAdmin):
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
+    """
+      Custom admin interface for the Category model.
+    """
     list_display = ['title', 'parent_category', 'is_sub']
     search_fields = ['title']
     list_per_page = 10
@@ -77,17 +83,26 @@ class CategoryAdmin(admin.ModelAdmin):
         return super().get_queryset(request).select_related('sub_category')
 
     def parent_category(self, category):
+        """
+        Display the parent category of the current category.
+        """
         return category.sub_category
 
 
 @admin.register(Discount)
 class DiscountAdmin(admin.ModelAdmin):
+    """
+    Custom admin interface for the Discount model.
+    """
     list_display = ['discount', 'description']
     search_fields = ['discount']
     list_per_page = 10
 
 
 class VarietyInline(GenericTabularInline):
+    """
+    Inline admin interface for the Variety model.
+    """
     model = Variety
     extra = 0
     min_num = 1
@@ -97,6 +112,9 @@ class VarietyInline(GenericTabularInline):
     
 
 class ImageInline(GenericTabularInline):
+    """
+    Inline admin interface for the Image model.
+    """
     model = Image
     fields = ['name', 'image']
     extra = 0
@@ -105,7 +123,7 @@ class ImageInline(GenericTabularInline):
 
 class InventoryFilter(admin.SimpleListFilter):
     """
-    Filter inventory by remaining quantity.
+    Custom filter for inventory based on remaining quantity.
     """
     LESS_THAN_3 = '<3'
     BETWEEN_3_AND_10 = '3<=10'
@@ -115,6 +133,9 @@ class InventoryFilter(admin.SimpleListFilter):
     parameter_name = 'total_inventory'
 
     def lookups(self, request, model_admin):
+        """
+        Define the filter options for the inventory.
+        """
         return [
             (InventoryFilter.LESS_THAN_3, 'High'),
             (InventoryFilter.BETWEEN_3_AND_10, 'Medium'),
@@ -131,7 +152,9 @@ class InventoryFilter(admin.SimpleListFilter):
         
 
 class ProductAdmin(admin.ModelAdmin):
-
+    """
+    Custom admin interface for the Product model.
+    """
     formfield_overrides = {
         models.TextField: {'widget': forms.Textarea(attrs={'rows': 3, 'cols': 30})},
     }
@@ -143,6 +166,9 @@ class ProductAdmin(admin.ModelAdmin):
     
     @admin.display(description='# COMMENTS')
     def comments(self, obj):
+        """
+        Display a link to view comments related to the product.
+        """
         url = (
             reverse('admin:store_comment_changelist')
             + '?'
@@ -205,6 +231,9 @@ class ProductAdmin(admin.ModelAdmin):
 
 @admin.register(Mobile)
 class MobileAdmin(ProductAdmin):
+    """
+    Custom admin interface for the Mobile model.
+    """
     list_display = [
                     'short_id', 'name', 'category',
                     'product_variety','total_inventory',
@@ -236,6 +265,9 @@ class MobileAdmin(ProductAdmin):
 
 @admin.register(Laptop)
 class LaptopAdmin(ProductAdmin):
+    """
+    Custom admin interface for the Laptop model.
+    """
     list_display = [
                     'short_id', 'name', 'category',
                     'product_variety','total_inventory',
@@ -266,6 +298,9 @@ class LaptopAdmin(ProductAdmin):
 
 @admin.register(HeadPhone)
 class HeadPhoneAdmin(ProductAdmin):
+    """
+    Custom admin interface for the Laptop model.
+    """
     list_display = [
                     'short_id', 'name', 'category',
                     'product_variety','total_inventory',
@@ -296,6 +331,9 @@ class HeadPhoneAdmin(ProductAdmin):
 
 @admin.register(Customer)
 class CustomerAdmin(admin.ModelAdmin):
+    """
+    Custom admin interface for the Customer model.
+    """
     list_display = ['id', 'user',
                 'username',
                 'first_name',
@@ -343,6 +381,9 @@ class CustomerAdmin(admin.ModelAdmin):
 
 
 class OrderAndCartProductDetails(admin.TabularInline):
+    """
+    Inline admin interface for displaying product details in orders and cart items.
+    """
     fields = [
         'product_type', 'product_name', 'product_color',
         'product_unit_price', 'quantity', 'items_total_price'
@@ -355,6 +396,9 @@ class OrderAndCartProductDetails(admin.TabularInline):
     max_num = 0
 
     def product_type(self, item):
+        """
+        Display product type such as mobile, laptop or ... .
+        """
         return f'{item.content_type.name}'
     product_type.short_description = 'Product type'
 
@@ -376,7 +420,7 @@ class OrderAndCartProductDetails(admin.TabularInline):
 
 class CartItemInline(OrderAndCartProductDetails):
     """
-    Display items in cart.
+    Inline admin interface for displaying items in the cart.
     """
     model = CartItem
 
@@ -390,7 +434,7 @@ class CartItemInline(OrderAndCartProductDetails):
 @admin.register(Cart)
 class CartAdmin(admin.ModelAdmin):
     """
-    Display cart in admin panel.
+    Display cart in the admin panel.
     """
     list_display = ['id', 'created_at']
     fields = ['cart_total_price']
@@ -405,6 +449,9 @@ class CartAdmin(admin.ModelAdmin):
 
 
 class OrderItemInline(OrderAndCartProductDetails):
+    """
+     Inline admin interface for displaying items in orders.
+    """
     model = OrderItem
    
     def get_queryset(self, request):
@@ -417,6 +464,9 @@ class OrderItemInline(OrderAndCartProductDetails):
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
+    """
+     Display orders in the admin panel.
+    """
     list_display = ['order_code', 'customer', 'status', 'datetime_created']
     list_display_links = ['order_code', 'customer']
     fields = ['status', 'order_total_price']

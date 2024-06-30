@@ -3,13 +3,14 @@ from django.contrib.auth.models import UserManager
 
 
 class CustomUserManager(UserManager):
-
 	"""
-		A class for manage CustomUser model objects to
-		create user and super user by phone number
+	Custom manager for CustomUser model.
+    Provides helper methods for creating regular users and superusers.
 	"""
-
 	def create_user(self, email, password):
+		"""
+		Creates and returns a regular user with the given email and password.
+		"""
 		if not email:
 			raise ValueError('user must have phone number')
 
@@ -22,7 +23,9 @@ class CustomUserManager(UserManager):
 		return user
 
 	def create_superuser(self, email, password):
-		
+		"""
+		Creates and returns a superuser with the given email and password.
+		"""
 		user = self.create_user(email, password)
 		user.is_staff = True
 		user.is_superuser = True

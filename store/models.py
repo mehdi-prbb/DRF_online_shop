@@ -1,15 +1,17 @@
 from uuid import uuid4
-from django.conf import settings
 from django.db import models
-from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
-from django.contrib.contenttypes.models import ContentType
+from django.conf import settings
 from django.core.validators import MinValueValidator
-
+from django.contrib.contenttypes.models import ContentType
+from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 
 from colorfield.fields import ColorField
 
 
 class Category(models.Model):
+    """
+    Model representing a category, which can have sub-categories.
+    """
     sub_category = models.ForeignKey('self',
                                      verbose_name='category',
                                      on_delete=models.PROTECT,
@@ -42,6 +44,9 @@ class Discount(models.Model):
 
 
 class Product(models.Model):
+    """
+    Abstract base model for products.
+    """
     id = models.UUIDField(primary_key=True, default=uuid4, unique=True)
     name = models.CharField(max_length=255)
     category = models.ForeignKey(
@@ -123,6 +128,9 @@ class Variety(models.Model):
 
 
 class Image(models.Model):
+    """
+    Model representing products image.
+    """
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
     object_id = models.UUIDField(default=uuid4)
     content_object = GenericForeignKey('content_type', 'object_id')
@@ -134,6 +142,9 @@ class Image(models.Model):
 
 
 class Mobile(Product):
+    """
+    Model representing a mobile that inherited product attributes..
+    """
     networks = models.CharField(max_length=50)
     memory_card_support = models.CharField(max_length=50)
     sim_card_number = models.CharField(max_length=50)

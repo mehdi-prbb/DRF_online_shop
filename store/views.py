@@ -1,7 +1,6 @@
 from django.db.models import Value
 from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404
-from functools import reduce
 
 from rest_framework import status
 from rest_framework.decorators import action
@@ -10,10 +9,11 @@ from rest_framework.generics import ListAPIView
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.viewsets import ReadOnlyModelViewSet, GenericViewSet, ModelViewSet
-from rest_framework.mixins import ListModelMixin, RetrieveModelMixin, DestroyModelMixin, CreateModelMixin
-
-from store.filters import MobileFilterSet
-
+from rest_framework.mixins import (ListModelMixin,
+                                   RetrieveModelMixin,
+                                   DestroyModelMixin,
+                                   CreateModelMixin
+                                    )
 from . import serializers
 from . paginations import CustomPagination
 from .permissions import IsOwnerOrReadonly
